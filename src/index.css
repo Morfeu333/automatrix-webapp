@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=VT323:wght@400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light theme variables - White and Green */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 220 14.3% 95.9%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 160 84% 39%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .automatrix-gradient {
+    @apply bg-gradient-to-br from-automatrix-green to-automatrix-green-dark;
+  }
+
+  .automatrix-text-gradient {
+    @apply bg-gradient-to-r from-automatrix-green to-automatrix-green-dark bg-clip-text text-transparent;
+  }
+  
+  .glass-effect {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+  
+  .agent-n8n {
+    @apply bg-gradient-to-r from-pink-500 to-rose-500;
+  }
+  
+  .agent-claude {
+    @apply bg-gradient-to-r from-orange-500 to-amber-500;
+  }
+  
+  .agent-hostinger {
+    @apply bg-gradient-to-r from-purple-500 to-violet-500;
+  }
+  
+  .agent-digitalocean {
+    @apply bg-gradient-to-r from-blue-500 to-cyan-500;
+  }
+  
+  .agent-supabase {
+    @apply bg-gradient-to-r from-green-500 to-emerald-500;
+  }
+  
+  .agent-lovable {
+    @apply bg-gradient-to-r from-blue-500 to-orange-500;
+  }
+  
+  .agent-augment {
+    @apply bg-gradient-to-r from-gray-500 to-slate-500;
+  }
+  
+  .agent-gemini {
+    @apply bg-gradient-to-r from-blue-600 to-red-500;
+  }
+  
+  .agent-aitools {
+    @apply bg-gradient-to-r from-gray-900 to-black;
+  }
+  
+  .agent-general {
+    @apply bg-gradient-to-r from-automatrix-green to-automatrix-green-dark;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Video placeholder styles */
+.video-placeholder {
+  @apply bg-gradient-to-br from-automatrix-green/20 to-automatrix-green-dark/20 border-2 border-dashed border-automatrix-green/30 rounded-lg flex items-center justify-center min-h-[300px] relative overflow-hidden;
+}
+
+.video-placeholder::before {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse;
+}
+
+/* Animation utilities */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
