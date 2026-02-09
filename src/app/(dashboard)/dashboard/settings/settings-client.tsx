@@ -1,9 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { updateProfile, updateVibecoderProfile } from "@/app/(dashboard)/actions"
-import { Loader2, Check } from "lucide-react"
+import { useState, useRef } from "react"
+import { uploadAvatarAction, updateProfile, updateVibecoderProfile, changePassword, updateVibecoderSkills } from "@/app/(dashboard)/actions"
+import { Loader2, Check, Camera, User } from "lucide-react"
 import { ConnectOnboardingButton } from "./connect-button"
+import Image from "next/image"
 
 interface Props {
   profile: {
@@ -15,6 +16,7 @@ interface Props {
     skills: string[] | null
     role: string
     subscription_tier: string
+    avatar_url: string | null
   } | null
   vibecoderProfile: {
     github_url: string | null
@@ -26,8 +28,10 @@ interface Props {
     timezone: string | null
     approval_status: string
     connect_status: string
+    skills: Record<string, number> | null
   } | null
   email: string
+  userId: string
 }
 
 const tierLabels: Record<string, string> = {
@@ -36,7 +40,45 @@ const tierLabels: Record<string, string> = {
   business: "Max",
 }
 
-export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
+const SKILL_CATEGORIES: Record<string, string[]> = {
+  "APIs & Plataformas": ["N8N", "OpenAI", "Meta API", "Google API", "Supabase", "Stripe"],
+  "DevOps & Ferramentas": ["Docker", "Git", "Linux", "CI/CD", "Terraform"],
+  "Frameworks & Linguagens": ["Next.js", "React", "TailwindCSS", "Python", "Node.js", "LangChain"],
+}
+
+function calculateCompleteness(profile: Props["profile"]): number {
+  if (!profile) return 0
+  const fields = [
+    profile.full_name,
+    profile.bio,
+    profile.company,
+    profile.website,
+    profile.industry,
+    profile.skills?.length ? true : null,
+    profile.avatar_url,
+  ]
+  const filled = fields.filter(Boolean).length
+  return Math.round((filled / fields.length) * 100)
+}
+
+function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onClick={() => onChange(star === value ? 0 : star)}
+          className="text-lg transition-colors"
+        >
+          <span className={star <= value ? "text-yellow-400" : "text-muted-foreground/30"}>★</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function SettingsClient({ profile, vibecoderProfile, email, userId }: Props) {
   const [activeTab, setActiveTab] = useState("perfil")
   const [profileLoading, setProfileLoading] = useState(false)
   const [profileSuccess, setProfileSuccess] = useState(false)
@@ -44,12 +86,46 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
   const [vcLoading, setVcLoading] = useState(false)
   const [vcSuccess, setVcSuccess] = useState(false)
   const [vcError, setVcError] = useState("")
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwSuccess, setPwSuccess] = useState(false)
+  const [pwError, setPwError] = useState("")
+  const [skillRatings, setSkillRatings] = useState<Record<string, number>>(
+    (vibecoderProfile?.skills as Record<string, number>) ?? {}
+  )
+  const [skillsLoading, setSkillsLoading] = useState(false)
+  const [skillsSuccess, setSkillsSuccess] = useState(false)
+  const [skillsError, setSkillsError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const completeness = calculateCompleteness(profile)
 
   const tabs = [
     { id: "perfil", label: "Perfil" },
     ...(profile?.role === "vibecoder" ? [{ id: "vibecoder", label: "Vibecoder" }] : []),
     { id: "conta", label: "Conta" },
   ]
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setAvatarPreview(URL.createObjectURL(file))
+    setAvatarLoading(true)
+    setProfileError("")
+
+    const formData = new FormData()
+    formData.append("file", file)
+
+    const result = await uploadAvatarAction(formData)
+    setAvatarLoading(false)
+
+    if (result?.error) {
+      setProfileError(result.error)
+      setAvatarPreview(null)
+    }
+  }
 
   async function handleProfileSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -81,9 +157,60 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
     }
   }
 
+  async function handlePasswordSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setPwLoading(true)
+    setPwError("")
+    setPwSuccess(false)
+    const result = await changePassword(new FormData(e.currentTarget))
+    setPwLoading(false)
+    if (result?.error) {
+      setPwError(result.error)
+    } else {
+      setPwSuccess(true)
+      ;(e.target as HTMLFormElement).reset()
+      setTimeout(() => setPwSuccess(false), 3000)
+    }
+  }
+
+  async function handleSkillsSave() {
+    setSkillsLoading(true)
+    setSkillsError("")
+    setSkillsSuccess(false)
+    const filtered = Object.fromEntries(
+      Object.entries(skillRatings).filter(([, v]) => v > 0)
+    )
+    const result = await updateVibecoderSkills(JSON.stringify(filtered))
+    setSkillsLoading(false)
+    if (result?.error) {
+      setSkillsError(result.error)
+    } else {
+      setSkillsSuccess(true)
+      setTimeout(() => setSkillsSuccess(false), 3000)
+    }
+  }
+
+  const avatarSrc = avatarPreview || profile?.avatar_url || null
+
   return (
     <div>
       <h1 className="mb-6 text-2xl font-bold text-foreground">Configuracoes</h1>
+
+      {/* Profile Completeness */}
+      {completeness < 100 && (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-foreground">Perfil {completeness}% completo</span>
+            <span className="text-xs text-muted-foreground">Preencha todos os campos para melhorar sua visibilidade</span>
+          </div>
+          <div className="h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-500"
+              style={{ width: `${completeness}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="mb-6 flex gap-1 rounded-lg border border-border bg-muted/50 p-1">
@@ -115,6 +242,50 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
           )}
 
           <div className="flex flex-col gap-5">
+            {/* Avatar Section */}
+            <div className="flex items-center gap-5">
+              <div className="relative">
+                <div className="h-20 w-20 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border">
+                  {avatarSrc ? (
+                    <Image
+                      src={avatarSrc}
+                      alt="Avatar"
+                      width={80}
+                      height={80}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <User className="h-8 w-8 text-muted-foreground" />
+                  )}
+                </div>
+                {avatarLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarLoading}
+                  className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+                >
+                  <Camera className="h-4 w-4" />
+                  {avatarLoading ? "Enviando..." : "Alterar Foto"}
+                </button>
+                <p className="mt-1 text-xs text-muted-foreground">JPG, PNG, WebP ou GIF. Max 2MB.</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                />
+              </div>
+            </div>
+
             <div>
               <label htmlFor="full_name" className="mb-1.5 block text-sm font-medium text-foreground">Nome Completo</label>
               <input id="full_name" name="full_name" type="text" defaultValue={profile?.full_name ?? ""} className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
@@ -200,7 +371,7 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label htmlFor="hourly_rate" className="mb-1.5 block text-sm font-medium text-foreground">Valor/Hora (R$)</label>
+                <label htmlFor="hourly_rate" className="mb-1.5 block text-sm font-medium text-foreground">Valor/Hora ($)</label>
                 <input id="hourly_rate" name="hourly_rate" type="number" min="0" step="0.01" defaultValue={vibecoderProfile.hourly_rate ?? ""} className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
               </div>
               <div>
@@ -222,6 +393,48 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
             </button>
           </div>
         </form>
+
+        {/* Skills Matrix */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-foreground">Skills Matrix</h3>
+            <button
+              type="button"
+              onClick={handleSkillsSave}
+              disabled={skillsLoading}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-automatrix-dark disabled:opacity-50"
+            >
+              {skillsLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              {skillsLoading ? "Salvando..." : "Salvar Skills"}
+            </button>
+          </div>
+          {skillsError && (
+            <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/5 p-2 text-xs text-red-600">{skillsError}</div>
+          )}
+          {skillsSuccess && (
+            <div className="mb-3 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-xs text-green-600">
+              <Check className="h-3 w-3" /> Skills salvas!
+            </div>
+          )}
+          <div className="space-y-4">
+            {Object.entries(SKILL_CATEGORIES).map(([category, skills]) => (
+              <div key={category}>
+                <h4 className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">{category}</h4>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {skills.map((skill) => (
+                    <div key={skill} className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+                      <span className="text-sm text-foreground">{skill}</span>
+                      <StarRating
+                        value={skillRatings[skill] ?? 0}
+                        onChange={(v) => setSkillRatings((prev) => ({ ...prev, [skill]: v }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Stripe Connect Section */}
         <div className="rounded-xl border border-border bg-card p-5">
@@ -266,8 +479,33 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
               </div>
             </div>
             <div className="rounded-xl border border-border bg-card p-5">
-              <h3 className="mb-3 text-sm font-semibold text-foreground">Senha</h3>
-              <p className="text-sm text-muted-foreground">Em breve: alterar senha via email.</p>
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Alterar Senha</h3>
+              <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-3">
+                {pwError && (
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2 text-sm text-red-600">{pwError}</div>
+                )}
+                {pwSuccess && (
+                  <div className="flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 p-2 text-sm text-green-600">
+                    <Check className="h-4 w-4" /> Senha alterada com sucesso!
+                  </div>
+                )}
+                <div>
+                  <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-foreground">Nova Senha</label>
+                  <input id="password" name="password" type="password" minLength={6} required placeholder="Minimo 6 caracteres" className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                </div>
+                <div>
+                  <label htmlFor="confirm_password" className="mb-1.5 block text-sm font-medium text-foreground">Confirmar Senha</label>
+                  <input id="confirm_password" name="confirm_password" type="password" minLength={6} required className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+                </div>
+                <button
+                  type="submit"
+                  disabled={pwLoading}
+                  className="flex w-fit items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-automatrix-dark disabled:opacity-50"
+                >
+                  {pwLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {pwLoading ? "Alterando..." : "Alterar Senha"}
+                </button>
+              </form>
             </div>
           </div>
         </div>

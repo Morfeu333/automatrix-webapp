@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Calendar, Clock, Tag } from "lucide-react"
+import { Calendar, Clock, Tag, Search } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import type { Metadata } from "next"
 
@@ -16,22 +16,25 @@ interface Props {
 export default async function BlogPage({ searchParams }: Props) {
   const params = await searchParams
   const activeCategory = typeof params.category === "string" ? params.category : "Todos"
+  const searchQuery = typeof params.q === "string" ? params.q.trim() : ""
+  const activeTag = typeof params.tag === "string" ? params.tag : ""
 
   const supabase = await createClient()
 
-  // Fetch all categories first (lightweight query)
+  // Fetch all categories and tags (lightweight queries)
   const { data: catRows } = await supabase
     .from("blog_posts")
-    .select("category")
+    .select("category, tags")
     .eq("status", "published")
     .lte("published_at", new Date().toISOString())
 
   const categories = ["Todos", ...new Set((catRows ?? []).map(p => p.category).filter((c): c is string => Boolean(c)))]
+  const allTags = [...new Set((catRows ?? []).flatMap(p => p.tags ?? []).filter(Boolean))]
 
-  // Fetch posts with optional category filter
+  // Fetch posts with filters
   let postsQuery = supabase
     .from("blog_posts")
-    .select("slug, title, excerpt, category, author, read_time, cover_image, published_at")
+    .select("slug, title, excerpt, category, author, read_time, cover_image, published_at, tags")
     .eq("status", "published")
     .lte("published_at", new Date().toISOString())
 
@@ -39,11 +42,30 @@ export default async function BlogPage({ searchParams }: Props) {
     postsQuery = postsQuery.eq("category", activeCategory)
   }
 
+  if (searchQuery) {
+    postsQuery = postsQuery.or(`title.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`)
+  }
+
+  if (activeTag) {
+    postsQuery = postsQuery.contains("tags", [activeTag])
+  }
+
   const { data: posts, error: postsError } = await postsQuery.order("published_at", { ascending: false })
 
   if (postsError) console.error("Blog posts fetch error:", postsError.message)
 
   const blogPosts = posts ?? []
+
+  // Build current filter URL helper
+  function filterUrl(overrides: Record<string, string | undefined>) {
+    const p = new URLSearchParams()
+    const merged = { category: activeCategory === "Todos" ? undefined : activeCategory, q: searchQuery || undefined, tag: activeTag || undefined, ...overrides }
+    for (const [k, v] of Object.entries(merged)) {
+      if (v) p.set(k, v)
+    }
+    const qs = p.toString()
+    return `/blog${qs ? `?${qs}` : ""}`
+  }
 
   return (
     <div className="pt-20 pb-16">
@@ -55,12 +77,28 @@ export default async function BlogPage({ searchParams }: Props) {
           </p>
         </div>
 
+        {/* Search */}
+        <form action="/blog" method="GET" className="mb-6">
+          {activeCategory !== "Todos" && <input type="hidden" name="category" value={activeCategory} />}
+          {activeTag && <input type="hidden" name="tag" value={activeTag} />}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              name="q"
+              type="text"
+              defaultValue={searchQuery}
+              placeholder="Buscar posts..."
+              className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </form>
+
         {/* Categories */}
-        <div className="mb-8 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap gap-2">
           {categories.map((cat) => (
             <Link
               key={cat}
-              href={cat === "Todos" ? "/blog" : `/blog?category=${encodeURIComponent(cat)}`}
+              href={filterUrl({ category: cat === "Todos" ? undefined : cat })}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 cat === activeCategory
                   ? "bg-primary text-primary-foreground"
@@ -71,6 +109,29 @@ export default async function BlogPage({ searchParams }: Props) {
             </Link>
           ))}
         </div>
+
+        {/* Tags */}
+        {allTags.length > 0 && (
+          <div className="mb-8 flex flex-wrap gap-1.5">
+            {activeTag && (
+              <Link
+                href={filterUrl({ tag: undefined })}
+                className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+              >
+                #{activeTag} ✕
+              </Link>
+            )}
+            {allTags.filter(t => t !== activeTag).map((tag) => (
+              <Link
+                key={tag}
+                href={filterUrl({ tag })}
+                className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* Posts Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -123,11 +184,15 @@ export default async function BlogPage({ searchParams }: Props) {
           <div className="py-16 text-center">
             <Tag className="mx-auto h-12 w-12 text-muted-foreground/30" />
             <p className="mt-4 text-muted-foreground">
-              {activeCategory !== "Todos"
+              {searchQuery
+                ? `Nenhum resultado para "${searchQuery}".`
+                : activeTag
+                ? `Nenhum post com a tag "${activeTag}".`
+                : activeCategory !== "Todos"
                 ? `Nenhum post encontrado na categoria "${activeCategory}".`
                 : "Nenhum post publicado ainda."}
             </p>
-            {activeCategory !== "Todos" && (
+            {(activeCategory !== "Todos" || searchQuery || activeTag) && (
               <Link href="/blog" className="mt-2 inline-block text-sm text-primary hover:underline">
                 Ver todos os posts
               </Link>

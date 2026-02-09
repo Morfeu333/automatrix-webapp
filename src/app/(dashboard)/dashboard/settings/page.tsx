@@ -26,7 +26,21 @@ export default async function SettingsPage() {
       .select("*")
       .eq("user_id", user.id)
       .single()
-    vibecoderProfile = vc
+
+    if (vc) {
+      vibecoderProfile = {
+        github_url: vc.github_url,
+        portfolio_urls: vc.portfolio_urls,
+        tools: vc.tools,
+        frameworks: vc.frameworks,
+        hourly_rate: vc.hourly_rate,
+        hours_per_week: vc.hours_per_week,
+        timezone: vc.timezone,
+        approval_status: vc.approval_status,
+        connect_status: vc.connect_status,
+        skills: (vc.skills as Record<string, number> | null) ?? null,
+      }
+    }
   }
 
   return (
@@ -34,6 +48,7 @@ export default async function SettingsPage() {
       profile={profile}
       vibecoderProfile={vibecoderProfile}
       email={user.email ?? ""}
+      userId={user.id}
     />
   )
 }

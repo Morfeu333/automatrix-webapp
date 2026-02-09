@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Clock, User, Tag } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import type { Metadata } from "next"
+import { ShareButtons } from "@/components/ui/share-buttons"
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -38,16 +39,33 @@ export default async function BlogPostPage({ params }: Props) {
     .single()
 
   if (postError) {
-    // PGRST116 = "no rows returned" from .single() — actual 404
     if (postError.code === "PGRST116") {
       notFound()
     }
-    // Other errors: throw to trigger error boundary instead of showing 404
     throw new Error(`Failed to load blog post: ${postError.message}`)
   }
   if (!post) {
     notFound()
   }
+
+  // Fetch related posts (same category, excluding current)
+  let relatedPosts: Array<{ slug: string; title: string; excerpt: string | null; cover_image: string | null }> = []
+  if (post.category) {
+    const { data: related } = await supabase
+      .from("blog_posts")
+      .select("slug, title, excerpt, cover_image")
+      .eq("status", "published")
+      .eq("category", post.category)
+      .neq("slug", slug)
+      .lte("published_at", new Date().toISOString())
+      .order("published_at", { ascending: false })
+      .limit(3)
+
+    relatedPosts = related ?? []
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.automatrix-ia.com"
+  const postUrl = `${appUrl}/blog/${post.slug}`
 
   return (
     <div className="pt-20 pb-16">
@@ -89,6 +107,11 @@ export default async function BlogPostPage({ params }: Props) {
             )}
           </div>
 
+          {/* Share Buttons */}
+          <div className="mt-4">
+            <ShareButtons url={postUrl} title={post.title} />
+          </div>
+
           {post.cover_image ? (
             <div className="relative my-8 aspect-video w-full">
               <Image src={post.cover_image} alt={post.title} fill className="rounded-2xl object-cover" />
@@ -115,13 +138,54 @@ export default async function BlogPostPage({ params }: Props) {
           {post.tags && post.tags.length > 0 && (
             <div className="mt-8 flex flex-wrap gap-2 border-t border-border pt-6">
               {post.tags.map((tag: string) => (
-                <span key={tag} className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground">
+                <Link
+                  key={tag}
+                  href={`/blog?tag=${encodeURIComponent(tag)}`}
+                  className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                >
                   #{tag}
-                </span>
+                </Link>
               ))}
             </div>
           )}
+
+          {/* Share at bottom too */}
+          <div className="mt-6 border-t border-border pt-6">
+            <ShareButtons url={postUrl} title={post.title} />
+          </div>
         </article>
+
+        {/* Related Posts */}
+        {relatedPosts.length > 0 && (
+          <div className="mt-12 border-t border-border pt-8">
+            <h2 className="mb-6 text-xl font-bold text-foreground">Posts Relacionados</h2>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {relatedPosts.map((related) => (
+                <Link
+                  key={related.slug}
+                  href={`/blog/${related.slug}`}
+                  className="group rounded-xl border border-border bg-card transition-all hover:border-primary/30"
+                >
+                  <div className="relative aspect-video rounded-t-xl bg-muted flex items-center justify-center">
+                    {related.cover_image ? (
+                      <Image src={related.cover_image} alt={related.title} fill className="rounded-t-xl object-cover" />
+                    ) : (
+                      <Tag className="h-6 w-6 text-muted-foreground/50" />
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h3 className="text-sm font-medium text-foreground group-hover:text-primary line-clamp-2">
+                      {related.title}
+                    </h3>
+                    {related.excerpt && (
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{related.excerpt}</p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

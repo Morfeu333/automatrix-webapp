@@ -246,6 +246,153 @@ export async function markNotificationsRead() {
   return { error: null }
 }
 
+export async function uploadAvatarAction(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  const file = formData.get("file") as File
+  if (!file || file.size === 0) return { error: "Nenhum arquivo selecionado." }
+
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+  const MAX_AVATAR_SIZE = 2 * 1024 * 1024
+
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return { error: "Formato invalido. Use JPG, PNG, WebP ou GIF." }
+  }
+  if (file.size > MAX_AVATAR_SIZE) {
+    return { error: "Imagem muito grande. Maximo 2MB." }
+  }
+
+  const ext = file.name.split(".").pop() || "jpg"
+  const path = `${user.id}/avatar.${ext}`
+
+  await supabase.storage.from("avatars").remove([
+    `${user.id}/avatar.jpg`,
+    `${user.id}/avatar.png`,
+    `${user.id}/avatar.webp`,
+    `${user.id}/avatar.gif`,
+  ])
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { upsert: true, contentType: file.type })
+
+  if (uploadError) {
+    console.error("Avatar upload error:", uploadError.message)
+    return { error: "Erro ao fazer upload da imagem." }
+  }
+
+  const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path)
+  const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl })
+    .eq("id", user.id)
+
+  if (updateError) {
+    console.error("Profile avatar_url update error:", updateError.message)
+    return { error: "Upload feito, mas erro ao salvar no perfil." }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/dashboard/settings")
+  return { url: avatarUrl, error: null }
+}
+
+export async function changePassword(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  const password = formData.get("password") as string
+  const confirm = formData.get("confirm_password") as string
+
+  if (!password || password.length < 6) {
+    return { error: "A senha deve ter pelo menos 6 caracteres." }
+  }
+  if (password !== confirm) {
+    return { error: "As senhas nao coincidem." }
+  }
+
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) {
+    console.error("Change password error:", error.message)
+    return { error: "Erro ao alterar senha. Tente novamente." }
+  }
+
+  return { error: null }
+}
+
+export async function updateVibecoderSkills(skillsJson: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  let skills: Record<string, number>
+  try {
+    skills = JSON.parse(skillsJson)
+  } catch {
+    return { error: "Dados de skills invalidos." }
+  }
+
+  const { error } = await supabase
+    .from("vibecoders")
+    .update({ skills })
+    .eq("user_id", user.id)
+
+  if (error) {
+    console.error("Update vibecoder skills error:", error.message)
+    return { error: "Erro ao salvar skills." }
+  }
+
+  revalidatePath("/dashboard/settings")
+  return { error: null }
+}
+
+export async function markSingleNotificationRead(notificationId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("id", notificationId)
+    .eq("user_id", user.id)
+
+  if (error) {
+    console.error("Mark single notification read error:", error.message)
+    return { error: "Erro ao marcar notificacao como lida." }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/dashboard/notifications")
+  return { error: null }
+}
+
+export async function clearOldNotifications() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  const { error } = await supabase
+    .from("notifications")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("read", true)
+
+  if (error) {
+    console.error("Clear old notifications error:", error.message)
+    return { error: "Erro ao limpar notificacoes." }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/dashboard/notifications")
+  return { error: null }
+}
+
 export async function updateVibecoderProfile(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
