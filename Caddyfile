@@ -1,0 +1,18 @@
+{$DOMAIN:localhost} {
+    # Next.js Application
+    handle /* {
+        reverse_proxy webapp:3000
+    }
+
+    # Supabase API
+    handle /supabase/* {
+        uri strip_prefix /supabase
+        reverse_proxy supabase-kong:8000
+    }
+
+    # N8N Webhooks
+    handle /n8n/* {
+        uri strip_prefix /n8n
+        reverse_proxy n8n:5678
+    }
+}

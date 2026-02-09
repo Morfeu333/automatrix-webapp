@@ -41,3 +41,24 @@ out
 .vite
 .turbo
 *.tsbuildinfo
+
+# Serena tool config
+.serena/
+
+# Supabase CLI temp
+supabase/.temp/
+
+# Old code (preserved locally, excluded from repo)
+src-old/
+backend/
+
+# SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
+# HTML previews (design docs, not app code)
+docs/previews/
+
+# N8N workflow files (too large for git)
+public/n8n-workflows/
