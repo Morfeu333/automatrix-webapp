@@ -47,7 +47,7 @@ interface HeaderClientProps {
 const tierBadge: Record<SubscriptionTier, { label: string; class: string }> = {
   free: { label: "Free", class: "bg-zinc-700 text-zinc-300" },
   pro: { label: "Pro", class: "bg-primary/20 text-primary" },
-  business: { label: "Business", class: "bg-purple-500/20 text-purple-400" },
+  business: { label: "Max", class: "bg-purple-500/20 text-purple-400" },
 }
 
 export function HeaderClient({ navigation, user, notificationCount = 0 }: HeaderClientProps) {

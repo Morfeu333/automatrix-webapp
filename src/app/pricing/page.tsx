@@ -11,8 +11,9 @@ export const metadata: Metadata = {
 const plans = [
   {
     name: "Free",
-    price: "R$0",
-    period: "/mes",
+    tier: "free" as const,
+    price: "$0",
+    period: "/mo",
     description: "Para explorar e aprender",
     features: [
       "Download de workflow templates",
@@ -25,8 +26,9 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "R$49",
-    period: "/mes",
+    tier: "pro" as const,
+    price: "$99",
+    period: "/mo",
     description: "Para profissionais e freelancers",
     features: [
       "Tudo do Free",
@@ -41,9 +43,10 @@ const plans = [
     popular: true,
   },
   {
-    name: "Business",
-    price: "R$149",
-    period: "/mes",
+    name: "Max",
+    tier: "business" as const,
+    price: "$297",
+    period: "/mo",
     description: "Para empresas e equipes",
     features: [
       "Tudo do Pro",
@@ -55,7 +58,7 @@ const plans = [
       "Suporte dedicado",
       "SLA de atendimento",
     ],
-    cta: "Assinar Business",
+    cta: "Assinar Max",
     popular: false,
   },
 ]
@@ -110,7 +113,7 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              {plan.name === "Free" ? (
+              {plan.tier === "free" ? (
                 <Link
                   href="/register"
                   className="mt-8 block w-full rounded-lg border border-border bg-background py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-muted"
@@ -119,7 +122,7 @@ export default function PricingPage() {
                 </Link>
               ) : (
                 <CheckoutButton
-                  tier={plan.name.toLowerCase() as "pro" | "business"}
+                  tier={plan.tier}
                   className={`mt-8 block w-full rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
                     plan.popular
                       ? "bg-primary text-primary-foreground hover:bg-automatrix-dark"

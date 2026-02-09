@@ -171,7 +171,7 @@ export async function POST(request: Request) {
               user_id: sub.user_id,
               stripe_payment_id: (invoice.payment_intent as string) || null,
               amount: (invoice.amount_paid ?? 0) / 100,
-              currency: "brl",
+              currency: "usd",
               payment_type: "subscription",
               status: "completed",
             })

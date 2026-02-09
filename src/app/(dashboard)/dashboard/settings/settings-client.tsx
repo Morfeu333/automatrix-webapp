@@ -33,7 +33,7 @@ interface Props {
 const tierLabels: Record<string, string> = {
   free: "Free",
   pro: "Pro",
-  business: "Business",
+  business: "Max",
 }
 
 export function SettingsClient({ profile, vibecoderProfile, email }: Props) {

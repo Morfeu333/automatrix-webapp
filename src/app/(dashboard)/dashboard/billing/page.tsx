@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const tierLabels: Record<string, string> = {
   free: "Free",
   pro: "Pro",
-  business: "Business",
+  business: "Max",
 }
 
 const statusLabels: Record<string, string> = {
@@ -123,7 +123,7 @@ export default async function BillingPage() {
                       {new Date(payment.created_at).toLocaleDateString("pt-BR")}
                     </td>
                     <td className="px-4 py-3 text-foreground">
-                      R$ {Number(payment.amount).toFixed(2)}
+                      $ {Number(payment.amount).toFixed(2)}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
