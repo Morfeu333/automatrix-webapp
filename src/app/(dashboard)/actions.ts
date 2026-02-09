@@ -165,15 +165,22 @@ export async function updateBidStatus(bidId: string, newStatus: "accepted" | "re
 
     if (projectError) {
       console.error("Assign vibecoder error:", projectError.message)
+      // Revert bid status since project assignment failed
+      await supabase.from("bids").update({ status: "pending" }).eq("id", bidId)
+      return { error: "Proposta aceita, mas erro ao atribuir ao projeto. Tente novamente." }
     }
 
     // Reject all other pending bids for this project
-    await supabase
+    const { error: rejectError } = await supabase
       .from("bids")
       .update({ status: "rejected" })
       .eq("project_id", bid.project_id)
       .eq("status", "pending")
       .neq("id", bidId)
+
+    if (rejectError) {
+      console.error("Bulk bid rejection error:", rejectError.message)
+    }
   }
 
   revalidatePath(`/projects/${bid.project_id}`)

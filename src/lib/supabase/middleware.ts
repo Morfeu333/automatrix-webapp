@@ -68,9 +68,11 @@ export async function updateSession(request: NextRequest) {
       .single()
 
     if (profileError) {
-      // DB error — don't deny admin access, let the page handle it
+      // DB error — fail closed: deny access when role cannot be verified
       console.error("Middleware admin profile check error:", profileError.message)
-      return supabaseResponse
+      const url = request.nextUrl.clone()
+      url.pathname = "/dashboard"
+      return NextResponse.redirect(url)
     }
 
     if (profile?.role !== "admin") {
@@ -87,15 +89,20 @@ export async function updateSession(request: NextRequest) {
   )
 
   if (isProRequired && user) {
-    const { data: tierProfile } = await supabase
+    const { data: tierProfile, error: tierError } = await supabase
       .from("profiles")
       .select("subscription_tier")
       .eq("id", user.id)
       .single()
 
+    if (tierError) {
+      console.error("Middleware tier check error:", tierError.message)
+      // Allow through on tier check error — page will verify independently
+    }
+
     const tier = tierProfile?.subscription_tier ?? "free"
 
-    if (tier === "free") {
+    if (!tierError && tier === "free") {
       const url = request.nextUrl.clone()
       url.pathname = "/pricing"
       url.searchParams.set("upgrade", "pro")

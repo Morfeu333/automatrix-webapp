@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL
+const MAX_MESSAGE_LENGTH = 5000
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -11,7 +12,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nao autenticado" }, { status: 401 })
   }
 
-  const body = await request.json()
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "JSON invalido" }, { status: 400 })
+  }
+
   const { message, agentId, sessionId } = body as {
     message?: string
     agentId?: string
@@ -22,12 +29,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Mensagem vazia" }, { status: 400 })
   }
 
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return NextResponse.json({ error: `Mensagem excede ${MAX_MESSAGE_LENGTH} caracteres` }, { status: 400 })
+  }
+
   if (!N8N_WEBHOOK_URL) {
-    return NextResponse.json({
-      reply: `Entendi sua pergunta sobre "${message.slice(0, 50)}". O backend N8N ainda nao esta conectado. Quando estiver configurado, vou processar suas perguntas usando IA especializada!`,
-      sessionId: sessionId || crypto.randomUUID(),
-      mock: true,
-    })
+    return NextResponse.json(
+      { error: "Agente IA nao configurado" },
+      { status: 503 }
+    )
   }
 
   try {

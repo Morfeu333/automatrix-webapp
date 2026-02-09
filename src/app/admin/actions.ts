@@ -8,11 +8,16 @@ async function requireAdmin() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase: null, error: "Nao autenticado." }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single()
+
+  if (profileError) {
+    console.error("Admin requireAdmin DB error:", profileError.message)
+    return { supabase: null, error: "Erro ao verificar permissoes. Tente novamente." }
+  }
 
   if (profile?.role !== "admin") return { supabase: null, error: "Sem permissao." }
   return { supabase, error: null }

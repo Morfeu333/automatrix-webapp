@@ -74,7 +74,9 @@ export function AgentsClient() {
       const agentMessage: ChatMessage = {
         id: `${uniqueId}-${++messageCounter}`,
         role: "assistant",
-        content: data.reply || data.error || "Sem resposta.",
+        content: res.ok
+          ? (data.reply || "Sem resposta.")
+          : (data.error || "Erro no agente IA. Tente novamente."),
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, agentMessage])

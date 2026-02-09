@@ -17,7 +17,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
 
-  const body = await request.json()
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "JSON invalido" }, { status: 400 })
+  }
   const tier = body.tier as string
 
   if (tier !== "pro" && tier !== "business") {
@@ -53,12 +58,17 @@ export async function POST(request: Request) {
 
     customerId = customer.id
 
-    await supabase.from("user_subscriptions").upsert({
+    const { error: upsertErr } = await supabase.from("user_subscriptions").upsert({
       user_id: user.id,
       stripe_customer_id: customerId,
       tier: "free",
       status: "active",
     })
+
+    if (upsertErr) {
+      console.error("Checkout subscription upsert error:", upsertErr.message)
+      return NextResponse.json({ error: "Erro ao preparar assinatura" }, { status: 500 })
+    }
   }
 
   const priceIds = getPriceIds()

@@ -68,10 +68,18 @@ export async function POST() {
 
       accountId = account.id
 
-      await supabase.from("vibecoders").update({
+      const { error: updateErr } = await supabase.from("vibecoders").update({
         stripe_connect_id: accountId,
         connect_status: "pending",
       }).eq("id", vibecoder.id)
+
+      if (updateErr) {
+        console.error("Stripe Connect vibecoder update error:", updateErr.message)
+        return NextResponse.json(
+          { error: "Erro ao vincular conta Stripe ao perfil" },
+          { status: 500 }
+        )
+      }
     } catch (err) {
       console.error("Stripe Connect create error:", err)
       return NextResponse.json(

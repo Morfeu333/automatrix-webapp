@@ -65,10 +65,16 @@ export async function POST(request: Request) {
         if (session.mode === "subscription" && session.subscription) {
           const userId = session.metadata?.user_id
           const tier = session.metadata?.tier as "pro" | "business" | undefined
+          const validTiers = ["pro", "business"] as const
 
-          if (!userId || !tier) break
+          if (!userId || !tier || !validTiers.includes(tier)) {
+            console.error(`Webhook ${event.id}: checkout.session.completed missing/invalid metadata`, {
+              userId, tier, sessionId: session.id,
+            })
+            return NextResponse.json({ error: "Missing metadata" }, { status: 500 })
+          }
 
-          await supabase.from("user_subscriptions").upsert({
+          const { error: upsertErr } = await supabase.from("user_subscriptions").upsert({
             user_id: userId,
             stripe_customer_id: session.customer as string,
             stripe_subscription_id: session.subscription as string,
@@ -76,10 +82,20 @@ export async function POST(request: Request) {
             status: "active",
           })
 
-          await supabase
+          if (upsertErr) {
+            console.error(`Webhook ${event.id}: user_subscriptions upsert failed:`, upsertErr.message)
+            return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+          }
+
+          const { error: profileErr } = await supabase
             .from("profiles")
             .update({ subscription_tier: tier })
             .eq("id", userId)
+
+          if (profileErr) {
+            console.error(`Webhook ${event.id}: profiles tier update failed:`, profileErr.message)
+            return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+          }
         }
         break
       }
@@ -91,21 +107,23 @@ export async function POST(request: Request) {
         }
         const dbStatus = mapStripeStatus(subscription.status)
 
-        // Find user by subscription ID
-        const { data: sub } = await supabase
+        const { data: sub, error: subLookupErr } = await supabase
           .from("user_subscriptions")
           .select("user_id")
           .eq("stripe_subscription_id", subscription.id)
           .single()
 
-        if (!sub) break
+        if (subLookupErr || !sub) {
+          console.error(`Webhook ${event.id}: subscription ${subscription.id} not found in DB`, subLookupErr?.message)
+          return NextResponse.json({ error: "Subscription not found" }, { status: 500 })
+        }
 
         const tier = dbStatus === "canceled" ? "free" : undefined
         const periodEnd = subscription.current_period_end
           ? new Date(subscription.current_period_end * 1000).toISOString()
           : undefined
 
-        await supabase
+        const { error: subUpdateErr } = await supabase
           .from("user_subscriptions")
           .update({
             status: dbStatus,
@@ -114,11 +132,21 @@ export async function POST(request: Request) {
           })
           .eq("stripe_subscription_id", subscription.id)
 
+        if (subUpdateErr) {
+          console.error(`Webhook ${event.id}: subscription update failed:`, subUpdateErr.message)
+          return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+        }
+
         if (tier) {
-          await supabase
+          const { error: profileErr } = await supabase
             .from("profiles")
             .update({ subscription_tier: tier })
             .eq("id", sub.user_id)
+
+          if (profileErr) {
+            console.error(`Webhook ${event.id}: profile tier downgrade failed:`, profileErr.message)
+            return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+          }
         }
         break
       }
@@ -139,7 +167,7 @@ export async function POST(request: Request) {
             .single()
 
           if (sub) {
-            await supabase.from("payments").insert({
+            const { error: paymentErr } = await supabase.from("payments").insert({
               user_id: sub.user_id,
               stripe_payment_id: (invoice.payment_intent as string) || null,
               amount: (invoice.amount_paid ?? 0) / 100,
@@ -147,6 +175,11 @@ export async function POST(request: Request) {
               payment_type: "subscription",
               status: "completed",
             })
+
+            if (paymentErr) {
+              console.error(`Webhook ${event.id}: payment insert failed:`, paymentErr.message)
+              return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+            }
           }
         }
         break
@@ -158,10 +191,15 @@ export async function POST(request: Request) {
         }
 
         if (invoice.subscription) {
-          await supabase
+          const { error: updateErr } = await supabase
             .from("user_subscriptions")
             .update({ status: "past_due" })
             .eq("stripe_subscription_id", invoice.subscription as string)
+
+          if (updateErr) {
+            console.error(`Webhook ${event.id}: past_due update failed:`, updateErr.message)
+            return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+          }
         }
         break
       }
@@ -170,7 +208,10 @@ export async function POST(request: Request) {
         const account = event.data.object as Stripe.Account
         const vibecoderId = account.metadata?.vibecoder_id
 
-        if (!vibecoderId) break
+        if (!vibecoderId) {
+          console.warn(`Webhook ${event.id}: account.updated missing vibecoder_id metadata`)
+          break
+        }
 
         const isActive = account.charges_enabled && account.payouts_enabled
         const connectStatus = isActive
@@ -179,10 +220,15 @@ export async function POST(request: Request) {
             ? "disabled"
             : "pending"
 
-        await supabase
+        const { error: connectErr } = await supabase
           .from("vibecoders")
           .update({ connect_status: connectStatus })
           .eq("id", vibecoderId)
+
+        if (connectErr) {
+          console.error(`Webhook ${event.id}: vibecoder connect_status update failed:`, connectErr.message)
+          return NextResponse.json({ error: "DB write failed" }, { status: 500 })
+        }
         break
       }
 
@@ -192,7 +238,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true })
   } catch (err) {
-    console.error("Webhook handler error:", err)
-    return NextResponse.json({ received: true })
+    console.error(`Webhook ${event.id} handler error:`, err)
+    return NextResponse.json({ error: "Internal webhook error" }, { status: 500 })
   }
 }
