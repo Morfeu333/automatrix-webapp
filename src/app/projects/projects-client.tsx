@@ -129,10 +129,13 @@ export function ProjectsClient({ projects }: { projects: ProjectRow[] }) {
               </div>
 
               <div className="mt-4 flex justify-end">
-                <button className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground">
+                <Link
+                  href={`/projects/${project.id}`}
+                  className="flex items-center gap-1.5 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                >
                   Ver Detalhes
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </Link>
               </div>
             </div>
           ))}

@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { Download, FolderKanban, MessageSquare, Zap, ArrowRight, Bell } from "lucide-react"
-import Link from "next/link"
+import { Download, FolderKanban, Bell, Zap, Users, Briefcase, DollarSign } from "lucide-react"
 import type { Metadata } from "next"
+import { DashboardClient } from "./dashboard-client"
 
 export const metadata: Metadata = {
   title: "Dashboard - Automatrix",
@@ -15,18 +15,156 @@ export default async function DashboardPage() {
 
   if (userError || !user) redirect("/login")
 
-  // Fetch user profile
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("full_name, email, role, subscription_tier, avatar_url")
     .eq("id", user.id)
     .single()
 
-  if (profileError) {
-    console.error("Dashboard profile fetch error:", profileError.message)
+  if (profileError) console.error("Dashboard profile fetch error:", profileError.message)
+
+  const role = profile?.role ?? "learner"
+  const displayName = profile?.full_name || user.email?.split("@")[0] || "Usuario"
+  let hasDataErrors = !!profileError
+
+  // ─── CLIENT DASHBOARD ────────────────────────────
+  if (role === "client") {
+    const [projectsRes, completedRes, notificationsRes, downloadsRes] = await Promise.all([
+      supabase.from("projects").select("id, title, status, bid_count, created_at").eq("client_id", user.id).in("status", ["open", "assigned", "in_progress", "review"]).order("created_at", { ascending: false }).limit(5),
+      supabase.from("projects").select("id", { count: "exact", head: true }).eq("client_id", user.id).eq("status", "completed"),
+      supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false),
+      supabase.from("workflow_downloads").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    ])
+
+    // Fetch bids received on user's projects
+    const { data: userProjectIds } = await supabase
+      .from("projects")
+      .select("id, title")
+      .eq("client_id", user.id)
+
+    let receivedBids: Array<{ id: string; amount: number; status: string; vibecoder_name: string; project_title: string; project_id: string }> = []
+    if (userProjectIds && userProjectIds.length > 0) {
+      const projectIdList = userProjectIds.map((p) => p.id)
+      const { data: bids } = await supabase
+        .from("bids")
+        .select("id, amount, status, project_id, vibecoder_id")
+        .in("project_id", projectIdList)
+        .order("created_at", { ascending: false })
+        .limit(5)
+
+      if (bids) {
+        receivedBids = await Promise.all(
+          bids.map(async (bid) => {
+            const { data: vc } = await supabase.from("vibecoders").select("user_id").eq("id", bid.vibecoder_id).single()
+            let vcName = "Vibecoder"
+            if (vc) {
+              const { data: p } = await supabase.from("profiles").select("full_name").eq("id", vc.user_id).single()
+              vcName = p?.full_name ?? "Vibecoder"
+            }
+            const proj = userProjectIds.find((p) => p.id === bid.project_id)
+            return {
+              id: bid.id,
+              amount: bid.amount,
+              status: bid.status,
+              vibecoder_name: vcName,
+              project_title: proj?.title ?? "Projeto",
+              project_id: bid.project_id,
+            }
+          })
+        )
+      }
+    }
+
+    hasDataErrors = hasDataErrors || !!(projectsRes.error || completedRes.error)
+
+    return (
+      <DashboardClient
+        role="client"
+        displayName={displayName}
+        hasDataErrors={hasDataErrors}
+        stats={[
+          { label: "Projetos Ativos", value: String(projectsRes.data?.length ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
+          { label: "Propostas Recebidas", value: String(receivedBids.length), icon: Users, color: "text-blue-600 bg-blue-100" },
+          { label: "Projetos Concluidos", value: String(completedRes.count ?? 0), icon: Briefcase, color: "text-green-600 bg-green-100" },
+          { label: "Downloads", value: String(downloadsRes.count ?? 0), icon: Download, color: "text-orange-600 bg-orange-100" },
+        ]}
+        clientProjects={projectsRes.data ?? []}
+        receivedBids={receivedBids}
+      />
+    )
   }
 
-  // Fetch stats in parallel
+  // ─── VIBECODER DASHBOARD ─────────────────────────
+  if (role === "vibecoder") {
+    const { data: vibecoder } = await supabase
+      .from("vibecoders")
+      .select("id")
+      .eq("user_id", user.id)
+      .single()
+
+    const vibecoderId = vibecoder?.id
+
+    const [openCountRes, notificationsRes] = await Promise.all([
+      supabase.from("projects").select("id", { count: "exact", head: true }).eq("status", "open"),
+      supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false),
+    ])
+
+    let myBids: Array<{ id: string; amount: number; status: string; project_id: string; project_title: string }> = []
+    let inProgressCount = 0
+
+    if (vibecoderId) {
+      const { data: bids } = await supabase
+        .from("bids")
+        .select("id, amount, status, project_id, projects(title)")
+        .eq("vibecoder_id", vibecoderId)
+        .order("created_at", { ascending: false })
+        .limit(5)
+
+      if (bids) {
+        myBids = bids.map((b) => ({
+          id: b.id,
+          amount: b.amount,
+          status: b.status,
+          project_id: b.project_id,
+          project_title: (b.projects as { title: string } | null)?.title ?? "Projeto",
+        }))
+      }
+
+      const { count } = await supabase
+        .from("projects")
+        .select("id", { count: "exact", head: true })
+        .eq("assigned_vibecoder_id", vibecoderId)
+        .in("status", ["assigned", "in_progress", "review"])
+
+      inProgressCount = count ?? 0
+    }
+
+    // Recommended open projects
+    const { data: recommended } = await supabase
+      .from("projects")
+      .select("id, title, category, budget_max")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    return (
+      <DashboardClient
+        role="vibecoder"
+        displayName={displayName}
+        hasDataErrors={hasDataErrors}
+        stats={[
+          { label: "Missoes Disponiveis", value: String(openCountRes.count ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
+          { label: "Propostas Enviadas", value: String(myBids.length), icon: Briefcase, color: "text-blue-600 bg-blue-100" },
+          { label: "Em Andamento", value: String(inProgressCount), icon: Zap, color: "text-green-600 bg-green-100" },
+          { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: Bell, color: "text-orange-600 bg-orange-100" },
+        ]}
+        myBids={myBids}
+        recommendedProjects={recommended ?? []}
+      />
+    )
+  }
+
+  // ─── LEARNER / DEFAULT DASHBOARD ─────────────────
   const [downloadsRes, projectsRes, notificationsRes, workflowsRes] = await Promise.all([
     supabase.from("workflow_downloads").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase.from("projects").select("id", { count: "exact", head: true }).eq("client_id", user.id).in("status", ["open", "in_progress", "review"]),
@@ -34,19 +172,6 @@ export default async function DashboardPage() {
     supabase.from("workflows").select("id", { count: "exact", head: true }).eq("active", true),
   ])
 
-  if (downloadsRes.error) console.error("Dashboard downloads count error:", downloadsRes.error.message)
-  if (projectsRes.error) console.error("Dashboard projects count error:", projectsRes.error.message)
-  if (notificationsRes.error) console.error("Dashboard notifications count error:", notificationsRes.error.message)
-  if (workflowsRes.error) console.error("Dashboard workflows count error:", workflowsRes.error.message)
-
-  const stats = [
-    { label: "Workflows Baixados", value: String(downloadsRes.count ?? 0), icon: Download, color: "text-blue-600 bg-blue-100" },
-    { label: "Projetos Ativos", value: String(projectsRes.count ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
-    { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: Bell, color: "text-green-600 bg-green-100" },
-    { label: "Templates Disponiveis", value: String(workflowsRes.count ?? 0), icon: Zap, color: "text-orange-600 bg-orange-100" },
-  ]
-
-  // Recent activity (last 5 downloads)
   const { data: recentDownloads, error: downloadsError } = await supabase
     .from("workflow_downloads")
     .select("downloaded_at, workflow_id, workflows(name)")
@@ -54,110 +179,25 @@ export default async function DashboardPage() {
     .order("downloaded_at", { ascending: false })
     .limit(5)
 
-  if (downloadsError) console.error("Dashboard recent downloads error:", downloadsError.message)
+  hasDataErrors = hasDataErrors || !!(downloadsRes.error || projectsRes.error || notificationsRes.error || workflowsRes.error || downloadsError)
 
-  const hasDataErrors = !!(downloadsRes.error || projectsRes.error || notificationsRes.error || workflowsRes.error || downloadsError || profileError)
-
-  const quickActions = [
-    { label: "Explorar Workflows", href: "/workflows", icon: Zap },
-    { label: "Mission Board", href: "/projects", icon: FolderKanban },
-    { label: "Mensagens", href: "/chat", icon: MessageSquare },
-  ]
+  const recentActivity = (recentDownloads ?? []).map((item) => ({
+    name: (item.workflows as { name: string } | null)?.name ?? "workflow",
+    downloaded_at: typeof item.downloaded_at === "string" ? item.downloaded_at : null,
+  }))
 
   return (
-    <div>
-      {hasDataErrors && (
-        <div className="mb-6 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-sm text-yellow-600">
-          Alguns dados podem estar indisponiveis no momento. Tente recarregar a pagina.
-        </div>
-      )}
-
-      {/* Welcome */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-foreground">
-          Ola, {profile?.full_name || user.email?.split("@")[0]}!
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          Aqui esta um resumo da sua atividade na Automatrix.
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.color}`}>
-                <stat.icon className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Quick Actions */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Acoes Rapidas</h2>
-          <div className="flex flex-col gap-2">
-            {quickActions.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-all hover:border-primary/30 hover:bg-accent"
-              >
-                <div className="flex items-center gap-3">
-                  <action.icon className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium text-foreground">{action.label}</span>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Activity */}
-        <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">Atividade Recente</h2>
-          {recentDownloads && recentDownloads.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              {recentDownloads.map((item, i) => {
-                const wf = item.workflows as { name: string } | null
-                const downloadedAt = typeof item.downloaded_at === "string" ? item.downloaded_at : null
-                return (
-                  <div key={i} className="flex items-center gap-3 text-sm">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                      <Download className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-foreground">
-                        Baixou <span className="font-medium">{wf?.name ?? "workflow"}</span>
-                      </p>
-                      {downloadedAt && (
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(downloadedAt).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="py-8 text-center">
-              <Zap className="mx-auto h-8 w-8 text-muted-foreground/30" />
-              <p className="mt-2 text-sm text-muted-foreground">Nenhuma atividade ainda.</p>
-              <Link href="/workflows" className="mt-2 inline-block text-sm font-medium text-primary hover:text-automatrix-dark">
-                Explorar workflows
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    <DashboardClient
+      role="learner"
+      displayName={displayName}
+      hasDataErrors={hasDataErrors}
+      stats={[
+        { label: "Workflows Baixados", value: String(downloadsRes.count ?? 0), icon: Download, color: "text-blue-600 bg-blue-100" },
+        { label: "Projetos Ativos", value: String(projectsRes.count ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
+        { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: Bell, color: "text-green-600 bg-green-100" },
+        { label: "Templates Disponiveis", value: String(workflowsRes.count ?? 0), icon: Zap, color: "text-orange-600 bg-orange-100" },
+      ]}
+      recentDownloads={recentActivity}
+    />
   )
 }
