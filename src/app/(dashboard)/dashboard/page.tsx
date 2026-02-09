@@ -56,6 +56,8 @@ export default async function DashboardPage() {
 
   if (downloadsError) console.error("Dashboard recent downloads error:", downloadsError.message)
 
+  const hasDataErrors = !!(downloadsRes.error || projectsRes.error || notificationsRes.error || workflowsRes.error || downloadsError || profileError)
+
   const quickActions = [
     { label: "Explorar Workflows", href: "/workflows", icon: Zap },
     { label: "Mission Board", href: "/projects", icon: FolderKanban },
@@ -64,6 +66,12 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      {hasDataErrors && (
+        <div className="mb-6 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-sm text-yellow-600">
+          Alguns dados podem estar indisponiveis no momento. Tente recarregar a pagina.
+        </div>
+      )}
+
       {/* Welcome */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground">
@@ -117,21 +125,27 @@ export default async function DashboardPage() {
           <h2 className="mb-4 text-lg font-semibold text-foreground">Atividade Recente</h2>
           {recentDownloads && recentDownloads.length > 0 ? (
             <div className="flex flex-col gap-3">
-              {recentDownloads.map((item: Record<string, unknown>, i: number) => (
-                <div key={i} className="flex items-center gap-3 text-sm">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <Download className="h-4 w-4 text-primary" />
+              {recentDownloads.map((item, i) => {
+                const wf = item.workflows as { name: string } | null
+                const downloadedAt = typeof item.downloaded_at === "string" ? item.downloaded_at : null
+                return (
+                  <div key={i} className="flex items-center gap-3 text-sm">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                      <Download className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-foreground">
+                        Baixou <span className="font-medium">{wf?.name ?? "workflow"}</span>
+                      </p>
+                      {downloadedAt && (
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(downloadedAt).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-foreground">
-                      Baixou <span className="font-medium">{(item.workflows as Record<string, string> | null)?.name ?? "workflow"}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(item.downloaded_at as string).toLocaleDateString("pt-BR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="py-8 text-center">

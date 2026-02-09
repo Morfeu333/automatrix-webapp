@@ -35,7 +35,12 @@ export default async function WorkflowDetailPage({ params }: Props) {
     .eq("slug", slug)
     .single()
 
-  if (error) console.error("Workflow fetch error:", error.message)
+  if (error) {
+    if (error.code === "PGRST116") {
+      notFound()
+    }
+    throw new Error(`Failed to load workflow: ${error.message}`)
+  }
   if (!workflow) notFound()
 
   // Fetch related workflows (same category, exclude current)

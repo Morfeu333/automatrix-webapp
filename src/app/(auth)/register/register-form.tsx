@@ -46,7 +46,8 @@ export function RegisterForm() {
       }
 
       setSuccess(true)
-    } catch {
+    } catch (err) {
+      console.error("Register error:", err)
       setError("Erro ao criar conta. Tente novamente.")
     } finally {
       setLoading(false)

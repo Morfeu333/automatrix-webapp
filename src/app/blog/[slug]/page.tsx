@@ -37,7 +37,15 @@ export default async function BlogPostPage({ params }: Props) {
     .eq("status", "published")
     .single()
 
-  if (postError || !post) {
+  if (postError) {
+    // PGRST116 = "no rows returned" from .single() — actual 404
+    if (postError.code === "PGRST116") {
+      notFound()
+    }
+    // Other errors: throw to trigger error boundary instead of showing 404
+    throw new Error(`Failed to load blog post: ${postError.message}`)
+  }
+  if (!post) {
     notFound()
   }
 

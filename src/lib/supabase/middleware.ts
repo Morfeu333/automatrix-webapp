@@ -7,9 +7,17 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables")
+    return supabaseResponse
+  }
+
   const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseKey,
     {
       cookies: {
         getAll() {
@@ -30,9 +38,13 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+
+  // If getUser fails due to a server error (not auth error), allow the request through
+  if (userError && userError.status !== 401 && userError.status !== 403) {
+    console.error("Middleware getUser error:", userError.message)
+    return supabaseResponse
+  }
 
   // Protected routes - redirect to login if not authenticated
   const protectedPaths = ["/dashboard", "/chat", "/settings", "/admin"]
@@ -49,11 +61,17 @@ export async function updateSession(request: NextRequest) {
 
   // Admin-only routes - check role
   if (request.nextUrl.pathname.startsWith("/admin") && user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single()
+
+    if (profileError) {
+      // DB error — don't deny admin access, let the page handle it
+      console.error("Middleware admin profile check error:", profileError.message)
+      return supabaseResponse
+    }
 
     if (profile?.role !== "admin") {
       const url = request.nextUrl.clone()

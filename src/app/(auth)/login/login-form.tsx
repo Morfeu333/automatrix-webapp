@@ -7,15 +7,17 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter, useSearchParams } from "next/navigation"
 
 function LoginFormInner() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
   const rawRedirect = searchParams.get("redirect") || "/dashboard"
   const redirectTo = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/dashboard"
+  const urlError = searchParams.get("error")
+
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(urlError ?? "")
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -42,7 +44,8 @@ function LoginFormInner() {
 
       router.push(redirectTo)
       router.refresh()
-    } catch {
+    } catch (err) {
+      console.error("Login error:", err)
       setError("Erro ao fazer login. Tente novamente.")
     } finally {
       setLoading(false)
