@@ -80,6 +80,29 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // Subscription tier gating - Pro+ required for certain routes
+  const proRequiredPaths = ["/dashboard/projects/new"]
+  const isProRequired = proRequiredPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  )
+
+  if (isProRequired && user) {
+    const { data: tierProfile } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", user.id)
+      .single()
+
+    const tier = tierProfile?.subscription_tier ?? "free"
+
+    if (tier === "free") {
+      const url = request.nextUrl.clone()
+      url.pathname = "/pricing"
+      url.searchParams.set("upgrade", "pro")
+      return NextResponse.redirect(url)
+    }
+  }
+
   // Redirect logged-in users away from auth pages
   const authPaths = ["/login", "/register"]
   const isAuthRoute = authPaths.some((path) =>

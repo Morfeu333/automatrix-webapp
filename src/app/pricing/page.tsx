@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Check, Zap } from "lucide-react"
 import type { Metadata } from "next"
+import { CheckoutButton } from "./checkout-button"
 
 export const metadata: Metadata = {
   title: "Precos - Automatrix",
@@ -109,16 +110,25 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <Link
-                href="/register"
-                className={`mt-8 block w-full rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
-                  plan.popular
-                    ? "bg-primary text-primary-foreground hover:bg-automatrix-dark"
-                    : "border border-border bg-background text-foreground hover:bg-muted"
-                }`}
-              >
-                {plan.cta}
-              </Link>
+              {plan.name === "Free" ? (
+                <Link
+                  href="/register"
+                  className="mt-8 block w-full rounded-lg border border-border bg-background py-2.5 text-center text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+                >
+                  {plan.cta}
+                </Link>
+              ) : (
+                <CheckoutButton
+                  tier={plan.name.toLowerCase() as "pro" | "business"}
+                  className={`mt-8 block w-full rounded-lg py-2.5 text-center text-sm font-semibold transition-colors ${
+                    plan.popular
+                      ? "bg-primary text-primary-foreground hover:bg-automatrix-dark"
+                      : "border border-border bg-background text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {plan.cta}
+                </CheckoutButton>
+              )}
             </div>
           ))}
         </div>

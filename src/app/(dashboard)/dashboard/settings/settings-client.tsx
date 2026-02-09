@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { updateProfile, updateVibecoderProfile } from "@/app/(dashboard)/actions"
 import { Loader2, Check } from "lucide-react"
+import { ConnectOnboardingButton } from "./connect-button"
 
 interface Props {
   profile: {
@@ -24,6 +25,7 @@ interface Props {
     hours_per_week: number | null
     timezone: string | null
     approval_status: string
+    connect_status: string
   } | null
   email: string
 }
@@ -154,7 +156,8 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
 
       {/* Vibecoder Tab */}
       {activeTab === "vibecoder" && vibecoderProfile && (
-        <form onSubmit={handleVcSubmit} className="max-w-2xl">
+        <div className="max-w-2xl space-y-6">
+        <form onSubmit={handleVcSubmit}>
           {vcError && (
             <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-600">{vcError}</div>
           )}
@@ -219,6 +222,31 @@ export function SettingsClient({ profile, vibecoderProfile, email }: Props) {
             </button>
           </div>
         </form>
+
+        {/* Stripe Connect Section */}
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="mb-3 text-sm font-semibold text-foreground">Pagamentos</h3>
+          {vibecoderProfile.connect_status === "active" ? (
+            <div className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-green-500" />
+              <span className="text-sm text-foreground">
+                Conta Stripe Connect ativa. Voce pode receber pagamentos.
+              </span>
+            </div>
+          ) : vibecoderProfile.approval_status === "approved" ? (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Configure sua conta Stripe Connect para receber pagamentos de projetos.
+              </p>
+              <ConnectOnboardingButton status={vibecoderProfile.connect_status} />
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Seu perfil de Vibecoder precisa ser aprovado antes de configurar pagamentos.
+            </p>
+          )}
+        </div>
+        </div>
       )}
 
       {/* Account Tab */}
