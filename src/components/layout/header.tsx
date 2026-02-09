@@ -19,16 +19,25 @@ export async function Header() {
   }
 
   let profile = null
+  let notificationCount = 0
   if (user) {
-    const { data, error: profileError } = await supabase
-      .from("profiles")
-      .select("full_name, avatar_url, role, subscription_tier")
-      .eq("id", user.id)
-      .single()
-    if (profileError) {
-      console.error("Header profile fetch error:", profileError.message)
+    const [profileRes, notifRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("full_name, avatar_url, role, subscription_tier")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("read", false),
+    ])
+    if (profileRes.error) {
+      console.error("Header profile fetch error:", profileRes.error.message)
     }
-    profile = data
+    profile = profileRes.data
+    notificationCount = notifRes.count ?? 0
   }
 
   const userData = user && profile ? {
@@ -44,6 +53,7 @@ export async function Header() {
     <HeaderClient
       navigation={navigation.map(n => ({ name: n.name, href: n.href }))}
       user={userData}
+      notificationCount={notificationCount}
     />
   )
 }

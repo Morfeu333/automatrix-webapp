@@ -75,12 +75,42 @@ export default async function AdminPage() {
 
   if (workflowsError) console.error("Admin workflows fetch error:", workflowsError.message)
 
+  // Fetch pending vibecoders for approval
+  const { data: rawVibecoders, error: vibecodersError } = await supabase
+    .from("vibecoders")
+    .select("id, user_id, approval_status, tools, frameworks, hourly_rate, created_at")
+    .in("approval_status", ["pending", "approved"])
+    .order("created_at", { ascending: false })
+    .limit(30)
+
+  if (vibecodersError) console.error("Admin vibecoders fetch error:", vibecodersError.message)
+
+  // Enrich vibecoders with profile data
+  const vibecoderUserIds = (rawVibecoders ?? []).map((vc) => vc.user_id)
+  let vibecoderProfiles: Record<string, { full_name: string | null; email: string | null }> = {}
+  if (vibecoderUserIds.length > 0) {
+    const { data: vcProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", vibecoderUserIds)
+
+    if (vcProfiles) {
+      vibecoderProfiles = Object.fromEntries(vcProfiles.map((p) => [p.id, { full_name: p.full_name, email: p.email }]))
+    }
+  }
+
+  const vibecoders = (rawVibecoders ?? []).map((vc) => ({
+    ...vc,
+    profiles: vibecoderProfiles[vc.user_id] || null,
+  }))
+
   return (
     <AdminClient
       stats={stats}
       users={users ?? []}
       blogPosts={blogPosts ?? []}
       workflows={workflows ?? []}
+      vibecoders={vibecoders}
     />
   )
 }

@@ -17,6 +17,7 @@ import {
   MessageSquare,
   ChevronDown,
   Shield,
+  Bell,
 } from "lucide-react"
 import { signOut } from "@/app/auth/actions"
 import type { UserRole, SubscriptionTier } from "@/types"
@@ -40,6 +41,7 @@ interface HeaderUser {
 interface HeaderClientProps {
   navigation: { name: string; href: string }[]
   user: HeaderUser | null
+  notificationCount?: number
 }
 
 const tierBadge: Record<SubscriptionTier, { label: string; class: string }> = {
@@ -48,7 +50,7 @@ const tierBadge: Record<SubscriptionTier, { label: string; class: string }> = {
   business: { label: "Business", class: "bg-purple-500/20 text-purple-400" },
 }
 
-export function HeaderClient({ navigation, user }: HeaderClientProps) {
+export function HeaderClient({ navigation, user, notificationCount = 0 }: HeaderClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -98,6 +100,20 @@ export function HeaderClient({ navigation, user }: HeaderClientProps) {
         {/* Desktop: Auth section */}
         <div className="hidden lg:flex lg:items-center lg:gap-3">
           {user ? (
+            <div className="flex items-center gap-2">
+              {/* Notification bell */}
+              <Link
+                href="/dashboard/notifications"
+                className="relative rounded-lg p-2 text-foreground/60 transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Bell className="h-5 w-5" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                    {notificationCount > 99 ? "99+" : notificationCount}
+                  </span>
+                )}
+              </Link>
+
             <div ref={dropdownRef} className="relative">
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -161,6 +177,7 @@ export function HeaderClient({ navigation, user }: HeaderClientProps) {
                   </div>
                 </div>
               )}
+            </div>
             </div>
           ) : (
             <>

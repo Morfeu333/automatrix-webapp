@@ -219,6 +219,26 @@ export async function updateProfile(formData: FormData) {
   return { error: null }
 }
 
+export async function markNotificationsRead() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("user_id", user.id)
+    .eq("read", false)
+
+  if (error) {
+    console.error("Mark notifications read error:", error.message)
+    return { error: "Erro ao marcar notificacoes como lidas." }
+  }
+
+  revalidatePath("/dashboard")
+  return { error: null }
+}
+
 export async function updateVibecoderProfile(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

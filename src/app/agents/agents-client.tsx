@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useId } from "react"
-import { Send, Menu, X } from "lucide-react"
+import { useState, useRef, useEffect, useId } from "react"
+import { Send, Menu, X, Loader2 } from "lucide-react"
 
 const agents = [
   { id: "n8n", name: "N8N Expert", emoji: "\u{1F527}", color: "bg-orange-500", description: "Workflow automation & API integrations" },
@@ -31,11 +31,18 @@ export function AgentsClient() {
     },
   ])
   const [input, setInput] = useState("")
+  const [loading, setLoading] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  function handleSend(e: React.FormEvent) {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
+
+  async function handleSend(e: React.FormEvent) {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || loading) return
 
     const userMessage: ChatMessage = {
       id: `${uniqueId}-${++messageCounter}`,
@@ -45,22 +52,48 @@ export function AgentsClient() {
     }
 
     setMessages((prev) => [...prev, userMessage])
+    const currentInput = input
     setInput("")
+    setLoading(true)
 
-    // Simulate agent response
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/agents/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: currentInput,
+          agentId: selectedAgent.id,
+          sessionId,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (data.sessionId) setSessionId(data.sessionId)
+
       const agentMessage: ChatMessage = {
         id: `${uniqueId}-${++messageCounter}`,
         role: "assistant",
-        content: `Entendi sua pergunta sobre "${input}". Este e um ambiente de demonstracao - quando o backend N8N estiver conectado, vou processar suas perguntas usando IA especializada. Por enquanto, explore as funcionalidades da plataforma!`,
+        content: data.reply || data.error || "Sem resposta.",
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, agentMessage])
-    }, 1000)
+    } catch {
+      const errorMessage: ChatMessage = {
+        id: `${uniqueId}-${++messageCounter}`,
+        role: "assistant",
+        content: "Erro de conexao com o agente. Tente novamente.",
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMessage])
+    } finally {
+      setLoading(false)
+    }
   }
 
   function selectAgent(agent: typeof agents[0]) {
     setSelectedAgent(agent)
+    setSessionId(null)
     setMessages([
       {
         id: `${uniqueId}-welcome-${agent.id}`,
@@ -101,6 +134,11 @@ export function AgentsClient() {
         </div>
       </aside>
 
+      {/* Backdrop */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Chat Area */}
       <div className="flex flex-1 flex-col">
         {/* Chat Header */}
@@ -132,6 +170,15 @@ export function AgentsClient() {
                 </div>
               </div>
             ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Pensando...</span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
         </div>
 
@@ -143,10 +190,15 @@ export function AgentsClient() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={`Pergunte ao ${selectedAgent.name}...`}
-              className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              disabled={loading}
+              className="flex-1 rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
             />
-            <button type="submit" className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-automatrix-dark">
-              <Send className="h-4 w-4" />
+            <button
+              type="submit"
+              disabled={loading || !input.trim()}
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-colors hover:bg-automatrix-dark disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </form>
         </div>

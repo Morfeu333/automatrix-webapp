@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { Users, Zap, DollarSign, TrendingUp, BarChart3, Settings, FileText, Shield, Check, X } from "lucide-react"
+import { useState, useTransition } from "react"
+import { Users, Zap, DollarSign, TrendingUp, BarChart3, Settings, FileText, Shield, Check, X, UserCheck } from "lucide-react"
+import { changeUserRole, changeUserTier, approveVibecoder, rejectVibecoder } from "./actions"
 
 interface AdminStats {
   totalUsers: number
@@ -40,27 +41,45 @@ interface WorkflowRow {
   created_at: string
 }
 
+interface VibecoderRow {
+  id: string
+  user_id: string
+  approval_status: string
+  tools: string[] | null
+  frameworks: string[] | null
+  hourly_rate: number | null
+  created_at: string
+  profiles: { full_name: string | null; email: string | null } | null
+}
+
 const roleColors: Record<string, string> = {
-  admin: "bg-red-100 text-red-700",
-  client: "bg-blue-100 text-blue-700",
-  vibecoder: "bg-purple-100 text-purple-700",
-  learner: "bg-green-100 text-green-700",
+  admin: "bg-red-500/10 text-red-400",
+  client: "bg-blue-500/10 text-blue-400",
+  vibecoder: "bg-purple-500/10 text-purple-400",
+  learner: "bg-green-500/10 text-green-400",
 }
 
 const tierColors: Record<string, string> = {
-  free: "bg-gray-100 text-gray-700",
-  pro: "bg-blue-100 text-blue-700",
-  business: "bg-purple-100 text-purple-700",
+  free: "bg-zinc-500/10 text-zinc-400",
+  pro: "bg-primary/10 text-primary",
+  business: "bg-purple-500/10 text-purple-400",
 }
 
 const postStatusColors: Record<string, string> = {
-  draft: "bg-yellow-100 text-yellow-700",
-  published: "bg-green-100 text-green-700",
-  archived: "bg-gray-100 text-gray-700",
+  draft: "bg-yellow-500/10 text-yellow-400",
+  published: "bg-green-500/10 text-green-400",
+  archived: "bg-zinc-500/10 text-zinc-400",
+}
+
+const approvalColors: Record<string, string> = {
+  pending: "bg-yellow-500/10 text-yellow-400",
+  approved: "bg-green-500/10 text-green-400",
+  rejected: "bg-red-500/10 text-red-400",
 }
 
 const tabs = [
   { id: "users", name: "Usuarios", icon: Users },
+  { id: "vibecoders", name: "Vibecoders", icon: UserCheck },
   { id: "content", name: "Conteudo", icon: FileText },
   { id: "analytics", name: "Analytics", icon: BarChart3 },
   { id: "settings", name: "Config", icon: Settings },
@@ -71,20 +90,51 @@ export function AdminClient({
   users,
   blogPosts,
   workflows,
+  vibecoders,
 }: {
   stats: AdminStats
   users: UserRow[]
   blogPosts: BlogPostRow[]
   workflows: WorkflowRow[]
+  vibecoders: VibecoderRow[]
 }) {
   const [activeTab, setActiveTab] = useState("users")
+  const [isPending, startTransition] = useTransition()
 
   const statCards = [
-    { label: "Total Usuarios", value: stats.totalUsers.toLocaleString(), icon: Users, color: "bg-blue-100 text-blue-600" },
-    { label: "Total Downloads", value: stats.totalDownloads.toLocaleString(), icon: Zap, color: "bg-green-100 text-green-600" },
-    { label: "Assinaturas Pagas", value: stats.paidSubscriptions.toLocaleString(), icon: DollarSign, color: "bg-purple-100 text-purple-600" },
-    { label: "Projetos Ativos", value: stats.activeProjects.toLocaleString(), icon: TrendingUp, color: "bg-orange-100 text-orange-600" },
+    { label: "Total Usuarios", value: stats.totalUsers.toLocaleString(), icon: Users, color: "bg-blue-500/10 text-blue-400" },
+    { label: "Total Downloads", value: stats.totalDownloads.toLocaleString(), icon: Zap, color: "bg-green-500/10 text-green-400" },
+    { label: "Assinaturas Pagas", value: stats.paidSubscriptions.toLocaleString(), icon: DollarSign, color: "bg-purple-500/10 text-purple-400" },
+    { label: "Projetos Ativos", value: stats.activeProjects.toLocaleString(), icon: TrendingUp, color: "bg-orange-500/10 text-orange-400" },
   ]
+
+  function handleRoleChange(userId: string, newRole: string) {
+    startTransition(async () => {
+      const result = await changeUserRole(userId, newRole)
+      if (result.error) console.error(result.error)
+    })
+  }
+
+  function handleTierChange(userId: string, newTier: string) {
+    startTransition(async () => {
+      const result = await changeUserTier(userId, newTier)
+      if (result.error) console.error(result.error)
+    })
+  }
+
+  function handleApprove(vibecoderId: string) {
+    startTransition(async () => {
+      const result = await approveVibecoder(vibecoderId)
+      if (result.error) console.error(result.error)
+    })
+  }
+
+  function handleReject(vibecoderId: string) {
+    startTransition(async () => {
+      const result = await rejectVibecoder(vibecoderId)
+      if (result.error) console.error(result.error)
+    })
+  }
 
   return (
     <div className="pt-20 pb-16">
@@ -118,12 +168,12 @@ export function AdminClient({
 
         {/* Tabs */}
         <div className="mt-8 border-b border-border">
-          <div className="flex gap-1">
+          <div className="flex gap-1 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -139,7 +189,7 @@ export function AdminClient({
         {/* Tab Content */}
         <div className="mt-6">
           {activeTab === "users" && (
-            <div className="rounded-xl border border-border bg-card overflow-hidden">
+            <div className="rounded-xl border border-border bg-card overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
@@ -156,14 +206,29 @@ export function AdminClient({
                       <td className="px-4 py-3 text-sm font-medium text-foreground">{u.full_name || "—"}</td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">{u.email || "—"}</td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${roleColors[u.role] ?? "bg-gray-100 text-gray-700"}`}>
-                          {u.role}
-                        </span>
+                        <select
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          disabled={isPending}
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${roleColors[u.role] ?? "bg-zinc-500/10 text-zinc-400"}`}
+                        >
+                          <option value="learner">learner</option>
+                          <option value="client">client</option>
+                          <option value="vibecoder">vibecoder</option>
+                          <option value="admin">admin</option>
+                        </select>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tierColors[u.subscription_tier] ?? "bg-gray-100 text-gray-700"}`}>
-                          {u.subscription_tier}
-                        </span>
+                        <select
+                          value={u.subscription_tier}
+                          onChange={(e) => handleTierChange(u.id, e.target.value)}
+                          disabled={isPending}
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${tierColors[u.subscription_tier] ?? "bg-zinc-500/10 text-zinc-400"}`}
+                        >
+                          <option value="free">free</option>
+                          <option value="pro">pro</option>
+                          <option value="business">business</option>
+                        </select>
                       </td>
                       <td className="px-4 py-3 text-sm text-muted-foreground">
                         {new Date(u.created_at).toLocaleDateString("pt-BR")}
@@ -182,12 +247,86 @@ export function AdminClient({
             </div>
           )}
 
+          {activeTab === "vibecoders" && (
+            <div className="rounded-xl border border-border bg-card overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Nome</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Tools</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">R$/h</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Acoes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vibecoders.map((vc) => {
+                    const profile = vc.profiles as { full_name: string | null; email: string | null } | null
+                    return (
+                      <tr key={vc.id} className="border-b border-border last:border-0 hover:bg-muted/30">
+                        <td className="px-4 py-3 text-sm font-medium text-foreground">
+                          {profile?.full_name || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {profile?.email || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {vc.tools?.slice(0, 3).join(", ") || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-muted-foreground">
+                          {vc.hourly_rate ? `R$${vc.hourly_rate}` : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${approvalColors[vc.approval_status] ?? "bg-zinc-500/10 text-zinc-400"}`}>
+                            {vc.approval_status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {vc.approval_status === "pending" && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => handleApprove(vc.id)}
+                                disabled={isPending}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-green-500/10 text-green-400 transition-colors hover:bg-green-500/20 disabled:opacity-50"
+                                title="Aprovar"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleReject(vc.id)}
+                                disabled={isPending}
+                                className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-500/10 text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                                title="Rejeitar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+                          {vc.approval_status === "approved" && (
+                            <span className="text-xs text-muted-foreground">Aprovado</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {vibecoders.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                        Nenhum vibecoder cadastrado ainda.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {activeTab === "content" && (
             <div className="space-y-6">
-              {/* Blog Posts */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-foreground">Blog Posts ({blogPosts.length})</h3>
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="rounded-xl border border-border bg-card overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
@@ -204,7 +343,7 @@ export function AdminClient({
                           <td className="px-4 py-3 text-sm font-medium text-foreground">{post.title}</td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{post.category ?? "—"}</td>
                           <td className="px-4 py-3">
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${postStatusColors[post.status] ?? "bg-gray-100 text-gray-700"}`}>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${postStatusColors[post.status] ?? "bg-zinc-500/10 text-zinc-400"}`}>
                               {post.status}
                             </span>
                           </td>
@@ -226,10 +365,9 @@ export function AdminClient({
                 </div>
               </div>
 
-              {/* Workflows */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-foreground">Workflows ({workflows.length})</h3>
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="rounded-xl border border-border bg-card overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
@@ -247,9 +385,9 @@ export function AdminClient({
                           <td className="px-4 py-3 text-sm text-muted-foreground">{wf.category ?? "—"}</td>
                           <td className="px-4 py-3">
                             {wf.active ? (
-                              <Check className="h-4 w-4 text-green-600" />
+                              <Check className="h-4 w-4 text-green-400" />
                             ) : (
-                              <X className="h-4 w-4 text-red-500" />
+                              <X className="h-4 w-4 text-red-400" />
                             )}
                           </td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">{wf.download_count}</td>
