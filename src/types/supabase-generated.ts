@@ -748,6 +748,7 @@ export type Database = {
           node_count: number | null
           required_apis: Json | null
           search_vector: unknown
+          slug: string
           tags: string[] | null
           trigger_type: string | null
           updated_at: string
@@ -767,6 +768,7 @@ export type Database = {
           node_count?: number | null
           required_apis?: Json | null
           search_vector?: unknown
+          slug: string
           tags?: string[] | null
           trigger_type?: string | null
           updated_at?: string
@@ -786,6 +788,7 @@ export type Database = {
           node_count?: number | null
           required_apis?: Json | null
           search_vector?: unknown
+          slug?: string
           tags?: string[] | null
           trigger_type?: string | null
           updated_at?: string

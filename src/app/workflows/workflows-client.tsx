@@ -1,11 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { Search, Filter, Download, Grid3X3, List, Zap } from "lucide-react"
+import { useState, useCallback, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Search, Filter, Download, Grid3X3, List, Zap, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface WorkflowRow {
   id: string
   filename: string
+  slug: string
   name: string
   description: string | null
   category: string
@@ -21,25 +24,75 @@ interface WorkflowRow {
 
 const complexityLevels = ["All", "beginner", "intermediate", "advanced"]
 
+interface WorkflowsClientProps {
+  workflows: WorkflowRow[]
+  categories: string[]
+  triggerTypes: string[]
+  totalCount: number
+  currentPage: number
+  totalPages: number
+  currentQuery: string
+  currentCategory: string
+  currentComplexity: string
+  currentTrigger: string
+}
+
 export function WorkflowsClient({
   workflows,
   categories,
-}: {
-  workflows: WorkflowRow[]
-  categories: string[]
-}) {
-  const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("All")
-  const [complexity, setComplexity] = useState("All")
+  triggerTypes,
+  totalCount,
+  currentPage,
+  totalPages,
+  currentQuery,
+  currentCategory,
+  currentComplexity,
+  currentTrigger,
+}: WorkflowsClientProps) {
+  const router = useRouter()
+  const [search, setSearch] = useState(currentQuery)
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
-  const [showFilters, setShowFilters] = useState(false)
+  const [showFilters, setShowFilters] = useState(
+    currentCategory !== "All" || currentComplexity !== "All" || currentTrigger !== "All"
+  )
 
-  const filtered = workflows.filter((w) => {
-    const matchesSearch = !search || w.name.toLowerCase().includes(search.toLowerCase()) || (w.description ?? "").toLowerCase().includes(search.toLowerCase())
-    const matchesCategory = category === "All" || w.category === category
-    const matchesComplexity = complexity === "All" || w.complexity === complexity
-    return matchesSearch && matchesCategory && matchesComplexity
-  })
+  // Build URL with params
+  const buildUrl = useCallback((overrides: Record<string, string>) => {
+    const params = new URLSearchParams()
+    const values = {
+      q: currentQuery,
+      category: currentCategory,
+      complexity: currentComplexity,
+      trigger: currentTrigger,
+      page: String(currentPage),
+      ...overrides,
+    }
+    for (const [key, value] of Object.entries(values)) {
+      if (value && value !== "All" && value !== "1" && !(key === "q" && !value)) {
+        params.set(key, value)
+      }
+    }
+    const qs = params.toString()
+    return `/workflows${qs ? `?${qs}` : ""}`
+  }, [currentQuery, currentCategory, currentComplexity, currentTrigger, currentPage])
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (search !== currentQuery) {
+        router.push(buildUrl({ q: search, page: "1" }))
+      }
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search, currentQuery, router, buildUrl])
+
+  function handleFilterChange(key: string, value: string) {
+    router.push(buildUrl({ [key]: value, page: "1" }))
+  }
+
+  function handlePageChange(newPage: number) {
+    router.push(buildUrl({ page: String(newPage) }))
+  }
 
   return (
     <div className="pt-20 pb-16">
@@ -47,7 +100,7 @@ export function WorkflowsClient({
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Workflow Templates</h1>
           <p className="mt-2 text-muted-foreground">
-            Explore {workflows.length.toLocaleString()}+ automacoes N8N gratuitas. Baixe, importe e comece a automatizar.
+            Explore {totalCount.toLocaleString()} automacoes N8N gratuitas. Baixe, importe e comece a automatizar.
           </p>
         </div>
 
@@ -59,7 +112,7 @@ export function WorkflowsClient({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar workflows..."
+              placeholder="Buscar workflows (ex: slack, gmail, webhook)..."
               className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
@@ -84,30 +137,56 @@ export function WorkflowsClient({
 
         {showFilters && (
           <div className="mb-6 rounded-xl border border-border bg-card p-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground">Categoria</label>
-                <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+                <select
+                  value={currentCategory}
+                  onChange={(e) => handleFilterChange("category", e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                >
                   {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <label className="mb-2 block text-sm font-medium text-foreground">Complexidade</label>
-                <select value={complexity} onChange={(e) => setComplexity(e.target.value)} className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary">
+                <select
+                  value={currentComplexity}
+                  onChange={(e) => handleFilterChange("complexity", e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                >
                   {complexityLevels.map((c) => <option key={c} value={c}>{c === "All" ? "Todas" : c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-foreground">Tipo de Trigger</label>
+                <select
+                  value={currentTrigger}
+                  onChange={(e) => handleFilterChange("trigger", e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                >
+                  {triggerTypes.map((t) => <option key={t} value={t}>{t === "All" ? "Todos" : t}</option>)}
                 </select>
               </div>
             </div>
           </div>
         )}
 
-        <div className="mb-4 text-sm text-muted-foreground">
-          {filtered.length} workflows encontrados
+        <div className="mb-4 flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {totalCount.toLocaleString()} workflows encontrados
+            {currentQuery && <span className="ml-1">para &quot;{currentQuery}&quot;</span>}
+          </span>
+          {totalPages > 1 && (
+            <span className="text-sm text-muted-foreground">
+              Pagina {currentPage} de {totalPages}
+            </span>
+          )}
         </div>
 
         <div className={viewMode === "grid" ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "flex flex-col gap-3"}>
-          {filtered.map((workflow) => (
-            <div key={workflow.id} className={`group rounded-xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-md ${viewMode === "list" ? "flex items-center gap-4 p-4" : "p-5"}`}>
+          {workflows.map((workflow) => (
+            <Link key={workflow.id} href={`/workflows/${workflow.slug}`} className={`group rounded-xl border border-border bg-card transition-all hover:border-primary/30 hover:shadow-md ${viewMode === "list" ? "flex items-center gap-4 p-4" : "block p-5"}`}>
               <div className={viewMode === "list" ? "flex-1" : ""}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
@@ -115,7 +194,7 @@ export function WorkflowsClient({
                       <Zap className="h-4 w-4" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground line-clamp-1">{workflow.name}</h3>
+                      <h3 className="text-sm font-semibold text-foreground line-clamp-1 group-hover:text-primary">{workflow.name}</h3>
                       <span className="text-xs text-muted-foreground">{workflow.category}</span>
                     </div>
                   </div>
@@ -138,18 +217,78 @@ export function WorkflowsClient({
                 </div>
               </div>
 
-              <button className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary transition-colors hover:bg-primary hover:text-primary-foreground md:mt-3 md:w-auto">
+              <div className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-medium text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground md:mt-3 md:w-auto">
                 <Download className="h-3.5 w-3.5" />
-                Download
-              </button>
-            </div>
+                Ver Detalhes
+              </div>
+            </Link>
           ))}
         </div>
 
-        {filtered.length === 0 && (
+        {workflows.length === 0 && (
           <div className="py-16 text-center">
             <Zap className="mx-auto h-12 w-12 text-muted-foreground/30" />
             <p className="mt-4 text-muted-foreground">Nenhum workflow encontrado.</p>
+            {currentQuery && (
+              <button
+                onClick={() => { setSearch(""); router.push("/workflows") }}
+                className="mt-2 text-sm text-primary hover:underline"
+              >
+                Limpar busca
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center gap-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage <= 1}
+              className="flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </button>
+
+            {/* Page numbers */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let pageNum: number
+                if (totalPages <= 7) {
+                  pageNum = i + 1
+                } else if (currentPage <= 4) {
+                  pageNum = i + 1
+                } else if (currentPage >= totalPages - 3) {
+                  pageNum = totalPages - 6 + i
+                } else {
+                  pageNum = currentPage - 3 + i
+                }
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-colors ${
+                      pageNum === currentPage
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages}
+              className="flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Proximo
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         )}
       </div>

@@ -2,6 +2,12 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { Download, FolderKanban, MessageSquare, Zap, ArrowRight, Bell } from "lucide-react"
 import Link from "next/link"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Dashboard - Automatrix",
+  description: "Seu painel de controle. Gerencie projetos, workflows e mensagens.",
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()

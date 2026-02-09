@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { ProjectsClient } from "./projects-client"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Projetos - Automatrix",
+  description: "Encontre projetos de automacao ou publique o seu. Conecte-se com Vibecoders especializados.",
+}
 
 export default async function ProjectsPage() {
   const supabase = await createClient()

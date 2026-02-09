@@ -2,22 +2,48 @@ import Link from "next/link"
 import Image from "next/image"
 import { Calendar, Clock, Tag } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
+import type { Metadata } from "next"
 
-export default async function BlogPage() {
+export const metadata: Metadata = {
+  title: "Blog - Automatrix",
+  description: "Tutoriais, dicas e novidades sobre automacao com IA e N8N.",
+}
+
+interface Props {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+export default async function BlogPage({ searchParams }: Props) {
+  const params = await searchParams
+  const activeCategory = typeof params.category === "string" ? params.category : "Todos"
+
   const supabase = await createClient()
 
-  const { data: posts, error: postsError } = await supabase
+  // Fetch all categories first (lightweight query)
+  const { data: catRows } = await supabase
+    .from("blog_posts")
+    .select("category")
+    .eq("status", "published")
+    .lte("published_at", new Date().toISOString())
+
+  const categories = ["Todos", ...new Set((catRows ?? []).map(p => p.category).filter((c): c is string => Boolean(c)))]
+
+  // Fetch posts with optional category filter
+  let postsQuery = supabase
     .from("blog_posts")
     .select("slug, title, excerpt, category, author, read_time, cover_image, published_at")
     .eq("status", "published")
     .lte("published_at", new Date().toISOString())
-    .order("published_at", { ascending: false })
+
+  if (activeCategory !== "Todos") {
+    postsQuery = postsQuery.eq("category", activeCategory)
+  }
+
+  const { data: posts, error: postsError } = await postsQuery.order("published_at", { ascending: false })
 
   if (postsError) console.error("Blog posts fetch error:", postsError.message)
 
   const blogPosts = posts ?? []
-
-  const categories = ["Todos", ...new Set(blogPosts.map(p => p.category).filter(Boolean))]
 
   return (
     <div className="pt-20 pb-16">
@@ -32,16 +58,17 @@ export default async function BlogPage() {
         {/* Categories */}
         <div className="mb-8 flex flex-wrap gap-2">
           {categories.map((cat) => (
-            <button
+            <Link
               key={cat}
+              href={cat === "Todos" ? "/blog" : `/blog?category=${encodeURIComponent(cat)}`}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                cat === "Todos"
+                cat === activeCategory
                   ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               {cat}
-            </button>
+            </Link>
           ))}
         </div>
 
@@ -95,7 +122,16 @@ export default async function BlogPage() {
         {blogPosts.length === 0 && (
           <div className="py-16 text-center">
             <Tag className="mx-auto h-12 w-12 text-muted-foreground/30" />
-            <p className="mt-4 text-muted-foreground">Nenhum post publicado ainda.</p>
+            <p className="mt-4 text-muted-foreground">
+              {activeCategory !== "Todos"
+                ? `Nenhum post encontrado na categoria "${activeCategory}".`
+                : "Nenhum post publicado ainda."}
+            </p>
+            {activeCategory !== "Todos" && (
+              <Link href="/blog" className="mt-2 inline-block text-sm text-primary hover:underline">
+                Ver todos os posts
+              </Link>
+            )}
           </div>
         )}
       </div>

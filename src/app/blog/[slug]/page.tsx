@@ -3,8 +3,30 @@ import Image from "next/image"
 import { ArrowLeft, Calendar, Clock, User, Tag } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import type { Metadata } from "next"
 
-export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+interface Props {
+  params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createClient()
+  const { data: post } = await supabase
+    .from("blog_posts")
+    .select("title, excerpt, category")
+    .eq("slug", slug)
+    .single()
+
+  if (!post) return { title: "Post Not Found - Automatrix" }
+
+  return {
+    title: `${post.title} - Automatrix Blog`,
+    description: post.excerpt ?? `${post.title} - ${post.category}`,
+  }
+}
+
+export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params
   const supabase = await createClient()
 

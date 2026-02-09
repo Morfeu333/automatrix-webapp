@@ -1,5 +1,11 @@
 import Link from "next/link"
 import { Check, Zap } from "lucide-react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Precos - Automatrix",
+  description: "Planos simples e transparentes. Comece gratis e evolua conforme sua necessidade.",
+}
 
 const plans = [
   {

@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { AdminClient } from "./admin-client"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Admin - Automatrix",
+  description: "Painel administrativo da plataforma Automatrix.",
+}
 
 export default async function AdminPage() {
   const supabase = await createClient()
