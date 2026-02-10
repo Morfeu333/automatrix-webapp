@@ -14,8 +14,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.automatrix-ia.com"
+
 export const metadata: Metadata = {
-  title: "Automatrix - AI Automation Hub & Marketplace",
+  title: {
+    default: "Automatrix - AI Automation Hub & Marketplace",
+    template: "%s | Automatrix",
+  },
   description:
     "Scale your business with AI automations. Browse 4,000+ free N8N workflow templates, hire expert Vibecoders, or build custom solutions.",
   keywords: [
@@ -24,7 +29,27 @@ export const metadata: Metadata = {
     "marketplace",
     "automation templates",
     "vibecoder",
+    "automatrix",
   ],
+  metadataBase: new URL(APP_URL),
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: APP_URL,
+    siteName: "Automatrix",
+    title: "Automatrix - AI Automation Hub & Marketplace",
+    description:
+      "Scale your business with AI automations. Browse 4,000+ free N8N workflow templates, hire expert Vibecoders, or build custom solutions.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Automatrix - AI Automation Hub & Marketplace",
+    description: "Scale your business with AI automations. 4,000+ free N8N workflow templates.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 }
 
 export default function RootLayout({

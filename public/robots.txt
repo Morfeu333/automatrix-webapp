@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /chat/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /settings/
+
+Sitemap: https://www.automatrix-ia.com/sitemap.xml

@@ -24,7 +24,7 @@ export default async function ChatPage() {
 
   return (
     <UpgradeGate requiredTier="pro" currentTier={tier} featureName="Mensagens Diretas">
-      <ChatClient />
+      <ChatClient userId={user.id} />
     </UpgradeGate>
   )
 }

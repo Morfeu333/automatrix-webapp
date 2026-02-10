@@ -393,6 +393,251 @@ export async function clearOldNotifications() {
   return { error: null }
 }
 
+// ── Chat Actions ──────────────────────────────────────────────────────
+
+export async function getConversations() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Voce precisa estar logado." }
+
+  // Get conversations where current user is a participant
+  const { data: participations, error: pErr } = await supabase
+    .from("conversation_participants")
+    .select("conversation_id, last_read_at")
+    .eq("user_id", user.id)
+
+  if (pErr || !participations?.length) return { data: [], error: null }
+
+  const conversationIds = participations.map((p) => p.conversation_id)
+
+  const { data: conversations, error: cErr } = await supabase
+    .from("conversations")
+    .select("*")
+    .in("id", conversationIds)
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+
+  if (cErr) return { data: null, error: "Erro ao carregar conversas." }
+
+  // For each conversation, get the other participant's profile + unread count
+  const enriched = await Promise.all(
+    (conversations ?? []).map(async (conv) => {
+      const { data: members } = await supabase
+        .from("conversation_participants")
+        .select("user_id, last_read_at")
+        .eq("conversation_id", conv.id)
+
+      const otherUserId = members?.find((m) => m.user_id !== user.id)?.user_id
+      const myLastRead = members?.find((m) => m.user_id === user.id)?.last_read_at
+
+      let otherProfile = null
+      if (otherUserId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, email")
+          .eq("id", otherUserId)
+          .single()
+        otherProfile = profile
+      }
+
+      // Count unread messages
+      let unreadCount = 0
+      if (myLastRead) {
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", conv.id)
+          .neq("sender_id", user.id)
+          .gt("created_at", myLastRead)
+        unreadCount = count ?? 0
+      } else {
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("conversation_id", conv.id)
+          .neq("sender_id", user.id)
+        unreadCount = count ?? 0
+      }
+
+      return {
+        ...conv,
+        other_user: otherProfile,
+        unread_count: unreadCount,
+      }
+    })
+  )
+
+  return { data: enriched, error: null }
+}
+
+export async function getMessages(conversationId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Voce precisa estar logado." }
+
+  // Verify user is participant
+  const { data: participant } = await supabase
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+    .single()
+
+  if (!participant) return { data: null, error: "Voce nao participa desta conversa." }
+
+  const { data: messages, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true })
+    .limit(100)
+
+  if (error) return { data: null, error: "Erro ao carregar mensagens." }
+
+  // Update last_read_at
+  await supabase
+    .from("conversation_participants")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+
+  return { data: messages, error: null }
+}
+
+export async function sendMessage(conversationId: string, content: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  if (!content.trim()) return { error: "Mensagem vazia." }
+
+  // Verify user is participant
+  const { data: participant } = await supabase
+    .from("conversation_participants")
+    .select("user_id")
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+    .single()
+
+  if (!participant) return { error: "Voce nao participa desta conversa." }
+
+  const { error: msgError } = await supabase.from("messages").insert({
+    conversation_id: conversationId,
+    sender_id: user.id,
+    content: content.trim(),
+    message_type: "text",
+    status: "sent",
+  })
+
+  if (msgError) {
+    console.error("Send message error:", msgError.message)
+    return { error: "Erro ao enviar mensagem." }
+  }
+
+  // Update conversation last_message
+  await supabase
+    .from("conversations")
+    .update({
+      last_message: content.trim().slice(0, 100),
+      last_message_at: new Date().toISOString(),
+    })
+    .eq("id", conversationId)
+
+  // Update sender's last_read_at
+  await supabase
+    .from("conversation_participants")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+
+  return { error: null }
+}
+
+export async function createConversation(otherUserId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Voce precisa estar logado." }
+
+  if (otherUserId === user.id) return { data: null, error: "Nao pode conversar consigo mesmo." }
+
+  // Check if conversation already exists between these two users
+  const { data: myConvos } = await supabase
+    .from("conversation_participants")
+    .select("conversation_id")
+    .eq("user_id", user.id)
+
+  if (myConvos?.length) {
+    const myConvoIds = myConvos.map((c) => c.conversation_id)
+    const { data: existing } = await supabase
+      .from("conversation_participants")
+      .select("conversation_id")
+      .eq("user_id", otherUserId)
+      .in("conversation_id", myConvoIds)
+
+    if (existing?.length) {
+      return { data: existing[0].conversation_id, error: null }
+    }
+  }
+
+  // Create new conversation
+  const { data: conv, error: convErr } = await supabase
+    .from("conversations")
+    .insert({})
+    .select("id")
+    .single()
+
+  if (convErr || !conv) return { data: null, error: "Erro ao criar conversa." }
+
+  // Add both participants
+  const { error: partErr } = await supabase
+    .from("conversation_participants")
+    .insert([
+      { conversation_id: conv.id, user_id: user.id },
+      { conversation_id: conv.id, user_id: otherUserId },
+    ])
+
+  if (partErr) {
+    console.error("Add participants error:", partErr.message)
+    return { data: null, error: "Erro ao adicionar participantes." }
+  }
+
+  return { data: conv.id, error: null }
+}
+
+export async function searchUsers(query: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { data: null, error: "Voce precisa estar logado." }
+
+  if (!query.trim() || query.trim().length < 2) return { data: [], error: null }
+
+  const { data: users, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_url, email")
+    .neq("id", user.id)
+    .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+    .limit(10)
+
+  if (error) return { data: null, error: "Erro ao buscar usuarios." }
+
+  return { data: users, error: null }
+}
+
+export async function markConversationRead(conversationId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Voce precisa estar logado." }
+
+  await supabase
+    .from("conversation_participants")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("conversation_id", conversationId)
+    .eq("user_id", user.id)
+
+  return { error: null }
+}
+
+// ── Vibecoder Profile Actions ─────────────────────────────────────────
+
 export async function updateVibecoderProfile(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
