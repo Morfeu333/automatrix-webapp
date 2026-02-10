@@ -56,6 +56,7 @@ interface Props {
   // Learner
   recentDownloads?: RecentDownload[]
   hasDataErrors?: boolean
+  pendingApproval?: boolean
 }
 
 const statusColors: Record<string, string> = {
@@ -77,13 +78,20 @@ const statusLabels: Record<string, string> = {
 
 export function DashboardClient({
   role, displayName, stats, clientProjects, receivedBids,
-  myBids, recommendedProjects, recentDownloads, hasDataErrors,
+  myBids, recommendedProjects, recentDownloads, hasDataErrors, pendingApproval,
 }: Props) {
   return (
     <div>
       {hasDataErrors && (
         <div className="mb-6 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 text-sm text-yellow-600">
           Alguns dados podem estar indisponiveis no momento. Tente recarregar a pagina.
+        </div>
+      )}
+
+      {pendingApproval && (
+        <div className="mb-6 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 text-sm text-blue-600">
+          <p className="font-medium">Perfil em revisao</p>
+          <p className="mt-1 text-blue-500">Seu perfil de Vibecoder esta sendo analisado pela equipe Automatrix. Voce podera enviar propostas apos a aprovacao.</p>
         </div>
       )}
 

@@ -47,7 +47,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Protected routes - redirect to login if not authenticated
-  const protectedPaths = ["/dashboard", "/chat", "/settings", "/admin"]
+  const protectedPaths = ["/dashboard", "/chat", "/settings", "/admin", "/onboarding"]
   const isProtectedRoute = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   )
@@ -57,6 +57,28 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/login"
     url.searchParams.set("redirect", request.nextUrl.pathname)
     return NextResponse.redirect(url)
+  }
+
+  // Onboarding gate - redirect to onboarding if not completed
+  const isOnboardingRoute = request.nextUrl.pathname.startsWith("/onboarding")
+  const isApiRoute = request.nextUrl.pathname.startsWith("/api/")
+  if (
+    isProtectedRoute &&
+    !isOnboardingRoute &&
+    !isApiRoute &&
+    user
+  ) {
+    const { data: onboardingProfile } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .single()
+
+    if (onboardingProfile && onboardingProfile.onboarding_completed === false) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/onboarding"
+      return NextResponse.redirect(url)
+    }
   }
 
   // Admin-only routes - check role

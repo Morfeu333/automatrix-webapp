@@ -438,6 +438,7 @@ export type Database = {
           full_name: string | null
           id: string
           industry: string | null
+          onboarding_completed: boolean
           profile_complete_pct: number | null
           role: Database["public"]["Enums"]["user_role"]
           skills: string[] | null
@@ -454,6 +455,7 @@ export type Database = {
           full_name?: string | null
           id: string
           industry?: string | null
+          onboarding_completed?: boolean
           profile_complete_pct?: number | null
           role?: Database["public"]["Enums"]["user_role"]
           skills?: string[] | null
@@ -470,6 +472,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           industry?: string | null
+          onboarding_completed?: boolean
           profile_complete_pct?: number | null
           role?: Database["public"]["Enums"]["user_role"]
           skills?: string[] | null

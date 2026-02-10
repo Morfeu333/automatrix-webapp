@@ -97,11 +97,12 @@ export default async function DashboardPage() {
   if (role === "vibecoder") {
     const { data: vibecoder } = await supabase
       .from("vibecoders")
-      .select("id")
+      .select("id, approval_status")
       .eq("user_id", user.id)
       .single()
 
     const vibecoderId = vibecoder?.id
+    const pendingApproval = vibecoder?.approval_status === "pending"
 
     const [openCountRes, notificationsRes] = await Promise.all([
       supabase.from("projects").select("id", { count: "exact", head: true }).eq("status", "open"),
@@ -159,6 +160,7 @@ export default async function DashboardPage() {
         ]}
         myBids={myBids}
         recommendedProjects={recommended ?? []}
+        pendingApproval={pendingApproval}
       />
     )
   }
