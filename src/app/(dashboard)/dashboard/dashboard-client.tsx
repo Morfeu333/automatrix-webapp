@@ -2,11 +2,16 @@
 
 import Link from "next/link"
 import { Download, FolderKanban, MessageSquare, Zap, ArrowRight, Bell, Users, DollarSign, Briefcase, Plus } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
+
+const iconMap: Record<string, LucideIcon> = {
+  Download, FolderKanban, MessageSquare, Zap, Bell, Users, DollarSign, Briefcase,
+}
 
 interface StatCard {
   label: string
   value: string
-  icon: React.ElementType
+  icon: string
   color: string
 }
 
@@ -94,11 +99,13 @@ export function DashboardClient({
 
       {/* Stats Grid */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {stats.map((stat) => {
+          const Icon = iconMap[stat.icon] ?? Zap
+          return (
           <div key={stat.label} className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center gap-3">
               <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${stat.color}`}>
-                <stat.icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-foreground">{stat.value}</p>
@@ -106,7 +113,7 @@ export function DashboardClient({
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

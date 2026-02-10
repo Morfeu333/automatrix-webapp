@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
-import { Download, FolderKanban, Bell, Zap, Users, Briefcase, DollarSign } from "lucide-react"
 import type { Metadata } from "next"
 import { DashboardClient } from "./dashboard-client"
 
@@ -83,10 +82,10 @@ export default async function DashboardPage() {
         displayName={displayName}
         hasDataErrors={hasDataErrors}
         stats={[
-          { label: "Projetos Ativos", value: String(projectsRes.data?.length ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
-          { label: "Propostas Recebidas", value: String(receivedBids.length), icon: Users, color: "text-blue-600 bg-blue-100" },
-          { label: "Projetos Concluidos", value: String(completedRes.count ?? 0), icon: Briefcase, color: "text-green-600 bg-green-100" },
-          { label: "Downloads", value: String(downloadsRes.count ?? 0), icon: Download, color: "text-orange-600 bg-orange-100" },
+          { label: "Projetos Ativos", value: String(projectsRes.data?.length ?? 0), icon: "FolderKanban", color: "text-purple-600 bg-purple-100" },
+          { label: "Propostas Recebidas", value: String(receivedBids.length), icon: "Users", color: "text-blue-600 bg-blue-100" },
+          { label: "Projetos Concluidos", value: String(completedRes.count ?? 0), icon: "Briefcase", color: "text-green-600 bg-green-100" },
+          { label: "Downloads", value: String(downloadsRes.count ?? 0), icon: "Download", color: "text-orange-600 bg-orange-100" },
         ]}
         clientProjects={projectsRes.data ?? []}
         receivedBids={receivedBids}
@@ -153,10 +152,10 @@ export default async function DashboardPage() {
         displayName={displayName}
         hasDataErrors={hasDataErrors}
         stats={[
-          { label: "Missoes Disponiveis", value: String(openCountRes.count ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
-          { label: "Propostas Enviadas", value: String(myBids.length), icon: Briefcase, color: "text-blue-600 bg-blue-100" },
-          { label: "Em Andamento", value: String(inProgressCount), icon: Zap, color: "text-green-600 bg-green-100" },
-          { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: Bell, color: "text-orange-600 bg-orange-100" },
+          { label: "Missoes Disponiveis", value: String(openCountRes.count ?? 0), icon: "FolderKanban", color: "text-purple-600 bg-purple-100" },
+          { label: "Propostas Enviadas", value: String(myBids.length), icon: "Briefcase", color: "text-blue-600 bg-blue-100" },
+          { label: "Em Andamento", value: String(inProgressCount), icon: "Zap", color: "text-green-600 bg-green-100" },
+          { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: "Bell", color: "text-orange-600 bg-orange-100" },
         ]}
         myBids={myBids}
         recommendedProjects={recommended ?? []}
@@ -192,10 +191,10 @@ export default async function DashboardPage() {
       displayName={displayName}
       hasDataErrors={hasDataErrors}
       stats={[
-        { label: "Workflows Baixados", value: String(downloadsRes.count ?? 0), icon: Download, color: "text-blue-600 bg-blue-100" },
-        { label: "Projetos Ativos", value: String(projectsRes.count ?? 0), icon: FolderKanban, color: "text-purple-600 bg-purple-100" },
-        { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: Bell, color: "text-green-600 bg-green-100" },
-        { label: "Templates Disponiveis", value: String(workflowsRes.count ?? 0), icon: Zap, color: "text-orange-600 bg-orange-100" },
+        { label: "Workflows Baixados", value: String(downloadsRes.count ?? 0), icon: "Download", color: "text-blue-600 bg-blue-100" },
+        { label: "Projetos Ativos", value: String(projectsRes.count ?? 0), icon: "FolderKanban", color: "text-purple-600 bg-purple-100" },
+        { label: "Notificacoes", value: String(notificationsRes.count ?? 0), icon: "Bell", color: "text-green-600 bg-green-100" },
+        { label: "Templates Disponiveis", value: String(workflowsRes.count ?? 0), icon: "Zap", color: "text-orange-600 bg-orange-100" },
       ]}
       recentDownloads={recentActivity}
     />
