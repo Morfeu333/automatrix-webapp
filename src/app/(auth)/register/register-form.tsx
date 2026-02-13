@@ -2,21 +2,28 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { Zap, Mail, Lock, User, Eye, EyeOff, Briefcase, Code, GraduationCap } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { UserRole } from "@/types"
 
 const roles: { value: UserRole; label: string; description: string; icon: React.ElementType }[] = [
   { value: "client", label: "Cliente", description: "Busco automacoes e servicos", icon: Briefcase },
-  { value: "vibecoder", label: "Vibecoder", description: "Ofereco servicos de automacao", icon: Code },
+  { value: "vibecoder", label: "Desenvolvedor", description: "Ofereco servicos de automacao", icon: Code },
   { value: "learner", label: "Aprendiz", description: "Quero aprender sobre automacao", icon: GraduationCap },
 ]
 
+const VALID_ROLES: UserRole[] = ["client", "vibecoder", "learner"]
+
 export function RegisterForm() {
+  const searchParams = useSearchParams()
+  const roleParam = searchParams.get("role") as UserRole | null
+  const initialRole = roleParam && VALID_ROLES.includes(roleParam) ? roleParam : "learner"
+
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState<UserRole>("learner")
+  const [role, setRole] = useState<UserRole>(initialRole)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
@@ -29,7 +36,7 @@ export function RegisterForm() {
 
     try {
       const supabase = createClient()
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -37,6 +44,7 @@ export function RegisterForm() {
             full_name: fullName,
             role,
           },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback`,
         },
       })
 
@@ -45,6 +53,13 @@ export function RegisterForm() {
         return
       }
 
+      // If session exists (email confirm disabled), redirect to onboarding
+      if (data.session) {
+        window.location.href = "/onboarding"
+        return
+      }
+
+      // Fallback: if email confirm is enabled, show success
       setSuccess(true)
     } catch (err) {
       console.error("Register error:", err)

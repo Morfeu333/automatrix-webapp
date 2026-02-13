@@ -180,7 +180,6 @@ export function HeaderClient({ navigation, user, notificationCount = 0 }: Header
             </div>
             </div>
           ) : (
-            <>
               <Link
                 href="/login"
                 className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:text-foreground"
@@ -188,13 +187,6 @@ export function HeaderClient({ navigation, user, notificationCount = 0 }: Header
                 <LogIn className="h-4 w-4" />
                 Entrar
               </Link>
-              <Link
-                href="/register"
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-automatrix-dark"
-              >
-                Criar Conta
-              </Link>
-            </>
           )}
         </div>
 
@@ -270,15 +262,10 @@ export function HeaderClient({ navigation, user, notificationCount = 0 }: Header
                 </form>
               </>
             ) : (
-              <>
                 <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/70">
                   <LogIn className="h-4 w-4" />
                   Entrar
                 </Link>
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)} className="mt-1 rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground">
-                  Criar Conta
-                </Link>
-              </>
             )}
           </div>
         </div>

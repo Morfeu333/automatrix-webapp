@@ -9,6 +9,9 @@ import {
   Cpu,
   Globe,
   Star,
+  Briefcase,
+  Code,
+  GraduationCap,
 } from "lucide-react"
 
 const features = [
@@ -20,9 +23,9 @@ const features = [
   },
   {
     icon: Users,
-    title: "Marketplace de Vibecoders",
+    title: "Marketplace de Desenvolvedores",
     description:
-      "Contrate especialistas em automacao e IA para implementar suas solucoes. Pagamento seguro via Stripe.",
+      "Contrate desenvolvedores especializados em automacao e IA para implementar suas solucoes. Pagamento seguro via Stripe.",
   },
   {
     icon: Bot,
@@ -46,7 +49,7 @@ const features = [
     icon: Globe,
     title: "Comunidade Ativa",
     description:
-      "Blog com tutoriais, templates gratuitos e uma comunidade de vibecoders prontos para ajudar.",
+      "Blog com tutoriais, templates gratuitos e uma comunidade de desenvolvedores prontos para ajudar.",
   },
 ]
 
@@ -76,7 +79,7 @@ const testimonials = [
     name: "Pedro L.",
     role: "Freelance Developer",
     content:
-      "Como vibecoder, encontro projetos qualificados e pagamento seguro. Excelente plataforma.",
+      "Como desenvolvedor, encontro projetos qualificados e pagamento seguro. Excelente plataforma.",
     rating: 5,
   },
 ]
@@ -99,10 +102,10 @@ export default function LandingPage() {
             </h1>
             <p className="mt-6 text-lg text-muted-foreground sm:text-xl">
               Acesse 4,000+ templates gratuitos de automacao, contrate
-              Vibecoders especializados, ou use nossos agentes IA para criar
+              desenvolvedores especializados, ou use nossos agentes IA para criar
               solucoes sob medida.
             </p>
-            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <div className="mt-10 flex justify-center">
               <Link
                 href="/workflows"
                 className="flex items-center gap-2 rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-automatrix-dark hover:shadow-xl"
@@ -110,16 +113,62 @@ export default function LandingPage() {
                 Explorar Templates
                 <ArrowRight className="h-5 w-5" />
               </Link>
+            </div>
+          </div>
+
+          {/* Role Selection Cards */}
+          <div id="como-comecar" className="mt-16 scroll-mt-24 lg:mt-20">
+            <h2 className="mb-6 text-center text-xl font-semibold text-foreground">Como voce quer comecar?</h2>
+            <div className="grid gap-4 md:grid-cols-3">
               <Link
-                href="/register"
-                className="flex items-center gap-2 rounded-xl border border-border bg-background px-8 py-3.5 text-base font-semibold text-foreground transition-colors hover:bg-muted"
+                href="/register?role=client"
+                className="group rounded-2xl border border-border bg-card p-6 text-center transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
               >
-                Criar Conta Gratis
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-400 transition-colors group-hover:bg-blue-500/20">
+                  <Briefcase className="h-7 w-7" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">Sou Cliente</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  Preciso automatizar processos ou contratar um desenvolvedor para criar minha solucao.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Criar projeto <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+              <Link
+                href="/register?role=vibecoder"
+                className="group rounded-2xl border border-primary/30 bg-card p-6 text-center transition-all hover:border-primary hover:shadow-lg hover:shadow-primary/10"
+              >
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+                  <Code className="h-7 w-7" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">Sou Desenvolvedor</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  Quero oferecer servicos de automacao e IA, encontrar projetos e receber por missoes.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Cadastrar perfil <ArrowRight className="h-4 w-4" />
+                </span>
+              </Link>
+              <Link
+                href="/register?role=learner"
+                className="group rounded-2xl border border-border bg-card p-6 text-center transition-all hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+              >
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-400 transition-colors group-hover:bg-purple-500/20">
+                  <GraduationCap className="h-7 w-7" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-foreground">Estou Aprendendo</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                  Quero explorar templates, aprender automacao com IA e evoluir minhas habilidades.
+                </p>
+                <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Comecar gratis <ArrowRight className="h-4 w-4" />
+                </span>
               </Link>
             </div>
           </div>
 
-          <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:mt-20">
+          <div className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {stats.map((stat) => (
               <div key={stat.label} className="rounded-2xl border border-border bg-card p-6 text-center">
                 <div className="text-3xl font-bold automatrix-text-gradient">{stat.value}</div>
@@ -164,7 +213,7 @@ export default function LandingPage() {
           <div className="mt-12 grid gap-8 md:grid-cols-3">
             {[
               { step: "1", title: "Explore & Baixe", description: "Navegue por 4,000+ templates de automacao N8N. Filtre por categoria, complexidade e integracoes." },
-              { step: "2", title: "Contrate ou Faca Voce Mesmo", description: "Implemente sozinho com tutoriais ou contrate um Vibecoder especialista pelo marketplace." },
+              { step: "2", title: "Contrate ou Faca Voce Mesmo", description: "Implemente sozinho com tutoriais ou contrate um desenvolvedor especialista pelo marketplace." },
               { step: "3", title: "Escale com IA", description: "Use nossos agentes IA para otimizar, criar projetos custom e escalar suas automacoes." },
             ].map((item) => (
               <div key={item.step} className="text-center">
@@ -213,9 +262,9 @@ export default function LandingPage() {
               Crie sua conta gratuita e comece a explorar templates, contratar especialistas e usar agentes IA.
             </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-              <Link href="/register" className="flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-automatrix-900 transition-colors hover:bg-white/90">
+              <a href="#como-comecar" className="flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-base font-semibold text-automatrix-900 transition-colors hover:bg-white/90">
                 Comecar Gratis <ArrowRight className="h-5 w-5" />
-              </Link>
+              </a>
               <Link href="/workflows" className="flex items-center gap-2 rounded-xl border border-white/30 px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10">
                 Ver Templates
               </Link>

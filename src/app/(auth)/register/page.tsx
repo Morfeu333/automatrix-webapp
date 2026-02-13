@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { RegisterForm } from "./register-form"
 import type { Metadata } from "next"
 
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RegisterPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 pt-16 pb-8">
-      <RegisterForm />
+      <Suspense>
+        <RegisterForm />
+      </Suspense>
     </div>
   )
 }
