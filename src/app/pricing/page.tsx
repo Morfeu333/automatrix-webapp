@@ -35,7 +35,7 @@ const plans = [
       "Chat DM ilimitado",
       "Conversas ilimitadas com agentes IA",
       "Criar e publicar projetos",
-      "Receber propostas de Vibecoders",
+      "Receber propostas de Desenvolvedores",
       "Perfil destacado",
       "Suporte prioritario",
     ],
@@ -51,7 +51,7 @@ const plans = [
     features: [
       "Tudo do Pro",
       "AI onboarding com geracao de PRD",
-      "Matching automatico de Vibecoders",
+      "Matching automatico de Desenvolvedores",
       "Dashboard analytics avancado",
       "Ate 5 membros da equipe",
       "Integracao Google Calendar",

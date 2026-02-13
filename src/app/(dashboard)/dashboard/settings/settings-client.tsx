@@ -103,7 +103,7 @@ export function SettingsClient({ profile, vibecoderProfile, email, userId }: Pro
 
   const tabs = [
     { id: "perfil", label: "Perfil" },
-    ...(profile?.role === "vibecoder" ? [{ id: "vibecoder", label: "Vibecoder" }] : []),
+    ...(profile?.role === "vibecoder" ? [{ id: "vibecoder", label: "Desenvolvedor" }] : []),
     { id: "conta", label: "Conta" },
   ]
 
@@ -334,7 +334,7 @@ export function SettingsClient({ profile, vibecoderProfile, email, userId }: Pro
           )}
           {vcSuccess && (
             <div className="mb-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/5 p-3 text-sm text-green-600">
-              <Check className="h-4 w-4" /> Perfil Vibecoder atualizado!
+              <Check className="h-4 w-4" /> Perfil de Desenvolvedor atualizado!
             </div>
           )}
 
@@ -389,7 +389,7 @@ export function SettingsClient({ profile, vibecoderProfile, email, userId }: Pro
               className="flex w-fit items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-automatrix-dark disabled:opacity-50"
             >
               {vcLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {vcLoading ? "Salvando..." : "Salvar Vibecoder"}
+              {vcLoading ? "Salvando..." : "Salvar Desenvolvedor"}
             </button>
           </div>
         </form>
@@ -455,7 +455,7 @@ export function SettingsClient({ profile, vibecoderProfile, email, userId }: Pro
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Seu perfil de Vibecoder precisa ser aprovado antes de configurar pagamentos.
+              Seu perfil de Desenvolvedor precisa ser aprovado antes de configurar pagamentos.
             </p>
           )}
         </div>

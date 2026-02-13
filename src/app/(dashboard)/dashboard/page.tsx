@@ -55,7 +55,7 @@ export default async function DashboardPage() {
         receivedBids = await Promise.all(
           bids.map(async (bid) => {
             const { data: vc } = await supabase.from("vibecoders").select("user_id").eq("id", bid.vibecoder_id).single()
-            let vcName = "Vibecoder"
+            let vcName = "Desenvolvedor"
             if (vc) {
               const { data: p } = await supabase.from("profiles").select("full_name").eq("id", vc.user_id).single()
               vcName = p?.full_name ?? "Vibecoder"

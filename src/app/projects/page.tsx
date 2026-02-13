@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 
 export const metadata: Metadata = {
   title: "Projetos - Automatrix",
-  description: "Encontre projetos de automacao ou publique o seu. Conecte-se com Vibecoders especializados.",
+  description: "Encontre projetos de automacao ou publique o seu. Conecte-se com desenvolvedores especializados.",
 }
 
 export default async function ProjectsPage() {

@@ -91,7 +91,7 @@ export function DashboardClient({
       {pendingApproval && (
         <div className="mb-6 rounded-lg border border-blue-500/30 bg-blue-500/5 p-4 text-sm text-blue-600">
           <p className="font-medium">Perfil em revisao</p>
-          <p className="mt-1 text-blue-500">Seu perfil de Vibecoder esta sendo analisado pela equipe Automatrix. Voce podera enviar propostas apos a aprovacao.</p>
+          <p className="mt-1 text-blue-500">Seu perfil de Desenvolvedor esta sendo analisado pela equipe Automatrix. Voce podera enviar propostas apos a aprovacao.</p>
         </div>
       )}
 

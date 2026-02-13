@@ -176,8 +176,8 @@ export async function completeVibecoderOnboarding(formData: FormData) {
     const notifications = admins.map((admin) => ({
       user_id: admin.id,
       type: "vibecoder_registration",
-      title: "Novo Vibecoder registrado",
-      body: `${fullName || "Um vibecoder"} completou o onboarding e aguarda aprovacao.`,
+      title: "Novo Desenvolvedor registrado",
+      body: `${fullName || "Um desenvolvedor"} completou o onboarding e aguarda aprovacao.`,
       link: "/admin",
     }))
     await supabase.from("notifications").insert(notifications)

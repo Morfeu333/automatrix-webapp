@@ -79,7 +79,7 @@ const approvalColors: Record<string, string> = {
 
 const tabs = [
   { id: "users", name: "Usuarios", icon: Users },
-  { id: "vibecoders", name: "Vibecoders", icon: UserCheck },
+  { id: "vibecoders", name: "Desenvolvedores", icon: UserCheck },
   { id: "content", name: "Conteudo", icon: FileText },
   { id: "analytics", name: "Analytics", icon: BarChart3 },
   { id: "settings", name: "Config", icon: Settings },
@@ -214,7 +214,7 @@ export function AdminClient({
                         >
                           <option value="learner">learner</option>
                           <option value="client">client</option>
-                          <option value="vibecoder">vibecoder</option>
+                          <option value="vibecoder">desenvolvedor</option>
                           <option value="admin">admin</option>
                         </select>
                       </td>
@@ -313,7 +313,7 @@ export function AdminClient({
                   {vibecoders.length === 0 && (
                     <tr>
                       <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                        Nenhum vibecoder cadastrado ainda.
+                        Nenhum desenvolvedor cadastrado ainda.
                       </td>
                     </tr>
                   )}

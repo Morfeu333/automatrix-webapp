@@ -199,7 +199,7 @@ export function VibecoderWizard({ displayName, userId, existingProfile, existing
       {/* Header */}
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-bold text-foreground">Seja bem-vindo, {displayName}!</h1>
-        <p className="mt-1 text-muted-foreground">Complete seu perfil de Vibecoder para comecar a receber missoes.</p>
+        <p className="mt-1 text-muted-foreground">Complete seu perfil de Desenvolvedor para comecar a receber missoes.</p>
       </div>
 
       {/* Step Indicator */}
