@@ -356,6 +356,7 @@ export type Database = {
           deliverables: Json | null
           extracted_requirements: Json | null
           id: string
+          project_scope: Json | null
           status: Database["public"]["Enums"]["onboarding_status"]
           updated_at: string
           user_id: string
@@ -367,6 +368,7 @@ export type Database = {
           deliverables?: Json | null
           extracted_requirements?: Json | null
           id?: string
+          project_scope?: Json | null
           status?: Database["public"]["Enums"]["onboarding_status"]
           updated_at?: string
           user_id: string
@@ -378,6 +380,7 @@ export type Database = {
           deliverables?: Json | null
           extracted_requirements?: Json | null
           id?: string
+          project_scope?: Json | null
           status?: Database["public"]["Enums"]["onboarding_status"]
           updated_at?: string
           user_id?: string

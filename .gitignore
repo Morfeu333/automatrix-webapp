@@ -62,3 +62,19 @@ docs/previews/
 
 # N8N workflow files (too large for git)
 public/n8n-workflows/
+
+# Design reference files (local only)
+CPV2.png
+*.pen
+
+# Video files (too large for git)
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Video scripts and transcriptions (marketing content, not app code)
+docs/video-scripts/
+
+# Onboarding HTML prototypes (design docs, not app code)
+onboarding/

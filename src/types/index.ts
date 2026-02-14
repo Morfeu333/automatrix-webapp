@@ -23,6 +23,20 @@ export type PayoutStatus = "pending" | "paid" | "failed"
 export type OnboardingStatus = "in_progress" | "completed" | "abandoned"
 export type BlogStatus = "draft" | "scheduled" | "published"
 
+export interface ProjectScope {
+  project_name?: string
+  description?: string
+  app_level?: AppLevel
+  frontend?: string
+  database?: string
+  backend?: string
+  llms?: string[]
+  integrations?: string[]
+  platform?: string
+  timeline?: string
+  budget?: string
+}
+
 // -- Tables --
 
 export interface Profile {
@@ -208,6 +222,7 @@ export interface OnboardingSession {
     generated_at?: string
     data?: unknown
   }>
+  project_scope: ProjectScope
   status: OnboardingStatus
   created_at: string
   updated_at: string
