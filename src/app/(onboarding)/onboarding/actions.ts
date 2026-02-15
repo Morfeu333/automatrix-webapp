@@ -44,6 +44,33 @@ export async function completeClientOnboarding(formData: FormData) {
 
   if (profileError) return { error: profileError.message }
 
+  // Auto-create agency_client if one doesn't exist
+  const { data: existingClient } = await supabase
+    .from("agency_clients")
+    .select("id")
+    .eq("profile_id", user.id)
+    .maybeSingle()
+
+  if (!existingClient) {
+    // Fetch project_scope from latest onboarding session if available
+    const { data: session } = await supabase
+      .from("onboarding_sessions")
+      .select("project_scope")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    await supabase.from("agency_clients").insert({
+      profile_id: user.id,
+      name: company || fullName || user.email?.split("@")[0] || "Novo Cliente",
+      client_status: "Pre-Onboarding",
+      project_scope: session?.project_scope ?? {},
+      website: website || null,
+      comms_channel: ["email"],
+    })
+  }
+
   revalidatePath("/dashboard")
   return { success: true }
 }

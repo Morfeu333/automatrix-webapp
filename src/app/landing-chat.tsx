@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import {
   Send,
   Bot,
@@ -14,7 +15,8 @@ import {
 import { createClient } from "@/lib/supabase/client"
 import { AuthPanel } from "./auth-panel"
 import type { UserRole, ProjectScope } from "@/types"
-import { ProjectScopeCard } from "./project-scope-card"
+import type { Json } from "@/types/supabase-generated"
+import { ClientPortalPreview } from "./client-portal-preview"
 import type { User } from "@supabase/supabase-js"
 
 interface ChatMessage {
@@ -62,32 +64,97 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
   const [showInlineAuth, setShowInlineAuth] = useState(false)
   const [pendingMessage, setPendingMessage] = useState<string | null>(null)
   const [user, setUser] = useState<User | null>(null)
-  const [sessionId] = useState(() => crypto.randomUUID())
+  const [sessionId, setSessionId] = useState(() => crypto.randomUUID())
   const [quickOptions, setQuickOptions] = useState<QuickOption[]>([])
   const [projectScope, setProjectScope] = useState<ProjectScope>({})
+  const [completing, setCompleting] = useState(false)
+  const router = useRouter()
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const hasInitialized = useRef(false)
+  const conversationRef = useRef<
+    Array<{ sender: string; message: string; timestamp: string }>
+  >([])
+  const projectScopeRef = useRef<ProjectScope>({})
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading, showInlineAuth])
 
-  // On mount: check auth and handle initial message
+  // Persist session to Supabase (upsert conversation + project_scope)
+  const persistSession = useCallback(
+    async (status: "in_progress" | "completed" = "in_progress") => {
+      if (!user) return
+      const supabase = createClient()
+      await supabase.from("onboarding_sessions").upsert(
+        {
+          id: sessionId,
+          user_id: user.id,
+          conversation: conversationRef.current as unknown as Json,
+          project_scope: projectScopeRef.current as unknown as Json,
+          status,
+        },
+        { onConflict: "id" }
+      )
+    },
+    [user, sessionId]
+  )
+
+  // On mount: check auth, restore session, handle initial message
   useEffect(() => {
     if (hasInitialized.current) return
     hasInitialized.current = true
 
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user: existingUser } }) => {
+    supabase.auth.getUser().then(async ({ data: { user: existingUser } }) => {
       if (existingUser) {
         setUser(existingUser)
+
+        // Try to restore an existing in-progress onboarding session
+        const { data: session } = await supabase
+          .from("onboarding_sessions")
+          .select("id, conversation, project_scope")
+          .eq("user_id", existingUser.id)
+          .eq("status", "in_progress")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (session) {
+          setSessionId(session.id)
+          const conv =
+            (session.conversation as Array<{
+              sender: string
+              message: string
+              timestamp: string
+            }>) ?? []
+          conversationRef.current = conv
+
+          if (conv.length > 0) {
+            setMessages([
+              { id: "welcome", role: "assistant", content: welcomeMessages[role] },
+              ...conv.map((entry, i) => ({
+                id: `restored-${i}`,
+                role: (entry.sender === "user" ? "user" : "assistant") as
+                  | "user"
+                  | "assistant",
+                content: entry.message,
+              })),
+            ])
+            setRightPanel("chatting")
+          }
+
+          if (session.project_scope) {
+            const scope = session.project_scope as unknown as ProjectScope
+            setProjectScope(scope)
+            projectScopeRef.current = scope
+          }
+        }
       }
 
       if (initialMessage) {
-        // Add user message to chat
         setMessages((prev) => [
           ...prev,
           { id: "initial-user", role: "user", content: initialMessage },
@@ -101,10 +168,17 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
         }
       }
     })
-  }, [initialMessage])
+  }, [initialMessage, role])
 
   const sendToAgent = useCallback(
     async (messageText: string, addToChat = true) => {
+      // Track user message in conversation ref
+      conversationRef.current.push({
+        sender: "user",
+        message: messageText,
+        timestamp: new Date().toISOString(),
+      })
+
       if (addToChat) {
         setMessages((prev) => [
           ...prev,
@@ -125,6 +199,7 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
             role,
             userName: user?.user_metadata?.full_name ?? undefined,
             userEmail: user?.email ?? undefined,
+            userId: user?.id ?? undefined,
           }),
         })
 
@@ -149,6 +224,13 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
         }
         const reply = data.response ?? data.output ?? "Sem resposta do agente."
 
+        // Track AI response in conversation ref
+        conversationRef.current.push({
+          sender: "ai",
+          message: reply,
+          timestamp: new Date().toISOString(),
+        })
+
         setMessages((prev) => [
           ...prev,
           { id: crypto.randomUUID(), role: "assistant", content: reply },
@@ -159,17 +241,24 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
         }
 
         if (data.projectScope) {
-          setProjectScope((prev) => ({
-            ...prev,
+          const newScope: ProjectScope = {
+            ...projectScopeRef.current,
             ...data.projectScope,
-            llms: data.projectScope?.llms ?? prev.llms,
-            integrations: data.projectScope?.integrations ?? prev.integrations,
-          }))
+            llms: data.projectScope?.llms ?? projectScopeRef.current.llms,
+            integrations:
+              data.projectScope?.integrations ??
+              projectScopeRef.current.integrations,
+          }
+          setProjectScope(newScope)
+          projectScopeRef.current = newScope
         }
 
         if (data.complete) {
           setRightPanel("complete")
         }
+
+        // Persist conversation + scope to Supabase
+        persistSession(data.complete ? "completed" : "in_progress")
       } catch {
         setMessages((prev) => [
           ...prev,
@@ -183,7 +272,7 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
         setIsLoading(false)
       }
     },
-    [sessionId, role, user]
+    [sessionId, role, user, persistSession]
   )
 
   // Send pending message after auth completes
@@ -203,6 +292,9 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
     ])
     setQuickOptions([])
     setProjectScope({})
+    projectScopeRef.current = {}
+    conversationRef.current = []
+    setSessionId(crypto.randomUUID())
     setInput("")
     setRightPanel("idle")
   }
@@ -249,6 +341,24 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
       e.preventDefault()
       handleSend()
     }
+  }
+
+  async function handleGoToDashboard() {
+    if (completing) return
+    setCompleting(true)
+    try {
+      await Promise.all([
+        fetch("/api/onboarding/complete-client", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectScope }),
+        }),
+        persistSession("completed"),
+      ])
+    } catch {
+      // Continue to dashboard even if API fails
+    }
+    router.push("/dashboard")
   }
 
   return (
@@ -425,43 +535,44 @@ export function LandingChat({ initialMessage, initialRole = "client" }: Props) {
         )}
 
         {rightPanel === "chatting" && (
-          <div className="flex h-full flex-col items-center justify-center bg-background p-8">
-            {Object.keys(projectScope).length > 0 ? (
-              <ProjectScopeCard scope={projectScope} />
-            ) : (
-              <>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  Analisando seu projeto...
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Continue a conversa no chat ao lado.
-                </p>
-              </>
-            )}
-          </div>
+          Object.keys(projectScope).length > 0 ? (
+            <ClientPortalPreview scope={projectScope} />
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center bg-background p-8">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground">
+                Analisando seu projeto...
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Continue a conversa no chat ao lado.
+              </p>
+            </div>
+          )
         )}
 
         {rightPanel === "complete" && (
-          <div className="flex h-full flex-col items-center justify-center bg-background p-8 gap-6">
+          <div className="relative flex h-full flex-col">
             {Object.keys(projectScope).length > 0 && (
-              <ProjectScopeCard scope={projectScope} isComplete />
+              <ClientPortalPreview scope={projectScope} isComplete />
             )}
-            <div className="text-center">
-              <h3 className="text-xl font-bold text-foreground">
+            {/* Fixed CTA at bottom */}
+            <div className="sticky bottom-0 border-t border-border bg-background p-4 text-center">
+              <h3 className="text-lg font-bold text-foreground">
                 Onboarding completo!
               </h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Seu perfil foi configurado com sucesso.
+              <p className="mt-1 text-sm text-muted-foreground">
+                Seu portal esta pronto.
               </p>
-              <a
-                href="/dashboard"
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-automatrix-dark"
+              <button
+                onClick={handleGoToDashboard}
+                disabled={completing}
+                className="mt-3 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-automatrix-dark disabled:opacity-50"
               >
+                {completing && <Loader2 className="h-4 w-4 animate-spin" />}
                 Ir para o Dashboard
-              </a>
+              </button>
             </div>
           </div>
         )}

@@ -22,9 +22,14 @@ export default async function DashboardPage() {
 
   if (profileError) console.error("Dashboard profile fetch error:", profileError.message)
 
-  const role = profile?.role ?? "learner"
+  const role: string = profile?.role ?? "learner"
   const displayName = profile?.full_name || user.email?.split("@")[0] || "Usuario"
   let hasDataErrors = !!profileError
+
+  // ─── STAFF → AGENCY HOME ──────────────────────────
+  if (role === "admin" || role === "vibecoder") {
+    redirect("/dashboard/agency")
+  }
 
   // ─── CLIENT DASHBOARD ────────────────────────────
   if (role === "client") {

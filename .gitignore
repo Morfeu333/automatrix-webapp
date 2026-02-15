@@ -77,4 +77,13 @@ CPV2.png
 docs/video-scripts/
 
 # Onboarding HTML prototypes (design docs, not app code)
-onboarding/
+/onboarding/
+
+# Claude Code local config
+.claude/
+
+# Obsidian vault config
+.obsidian/
+
+# Browser cookies (sensitive)
+cookies.txt

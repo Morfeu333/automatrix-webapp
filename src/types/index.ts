@@ -23,6 +23,27 @@ export type PayoutStatus = "pending" | "paid" | "failed"
 export type OnboardingStatus = "in_progress" | "completed" | "abandoned"
 export type BlogStatus = "draft" | "scheduled" | "published"
 
+// -- Agency OS Enums --
+
+export type AgencyClientStatus =
+  | "Pre-Onboarding" | "Onboarding Call" | "Onboarding Email"
+  | "Audit Process" | "Kick Off Call" | "Start Implementation"
+  | "End Implementation" | "Train Team" | "Optimisation"
+  | "Full Launch" | "Monthly Optimisation"
+
+export type AgencyTaskStatus = "BLOCKED" | "Not Started" | "In Progress" | "Complete"
+export type AgencyTaskType = "Internal" | "Client Action" | "Automation"
+
+export type AgencyMeetingType =
+  | "Sales" | "Onboarding" | "Kickoff" | "Progress"
+  | "Team Sync" | "Client Meeting" | "Planning" | "Retrospective"
+
+export type EmployeeDepartment =
+  | "Campaign Management" | "Account Management"
+  | "Marketing" | "Sales" | "Operations"
+
+export type ProjectPhaseStatus = "Blocked" | "Not Started" | "In Progress" | "Complete"
+
 export interface ProjectScope {
   project_name?: string
   description?: string
@@ -279,6 +300,157 @@ export interface BlogPost {
   scheduled_for: string | null
   seo_title: string | null
   seo_description: string | null
+  created_at: string
+  updated_at: string
+}
+
+// -- Agency OS Tables --
+
+export interface AgencyClient {
+  id: string
+  profile_id: string | null
+  name: string
+  client_status: AgencyClientStatus
+  plan: string[]
+  assigned_to: string | null
+  country: string[]
+  industry: string[]
+  website: string | null
+  linkedin_page: string | null
+  address: string | null
+  notes: string | null
+  contract_signed: string | null
+  onboarding_checklist_email: string | null
+  invoice_sent: string | null
+  monthly_retainer: number | null
+  average_check_size: number | null
+  comms_channel: string[]
+  poc_id: string | null
+  project_scope: ProjectScope
+  created_at: string
+  updated_at: string
+  // Computed (from views)
+  total_tasks?: number
+  completed_tasks?: number
+  task_progress_pct?: number
+}
+
+export interface AgencyTask {
+  id: string
+  name: string
+  status: AgencyTaskStatus
+  type: AgencyTaskType | null
+  due_date: string | null
+  notes: string | null
+  person_id: string | null
+  client_id: string | null
+  daily_report_id: string | null
+  created_at: string
+  updated_at: string
+  // Computed (from views)
+  is_overdue?: boolean
+  client_name?: string
+}
+
+export interface AgencyContact {
+  id: string
+  name: string
+  type: string[]
+  email: string | null
+  phone: string | null
+  role_title: string | null
+  time_zone: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AgencyMeeting {
+  id: string
+  name: string
+  type: AgencyMeetingType | null
+  date: string | null
+  notes: string | null
+  recording_url: string | null
+  client_id: string | null
+  daily_report_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Audience {
+  id: string
+  audience_name: string
+  date: string | null
+  geo: string | null
+  company_keywords_broad: string | null
+  company_keywords_specific: string | null
+  titles_broad: string | null
+  titles_specific: string | null
+  links: string | null
+  gpt_url: string | null
+  client_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Employee {
+  id: string
+  profile_id: string
+  job_title: string | null
+  department: EmployeeDepartment | null
+  location: string | null
+  start_date: string | null
+  phone_number: string | null
+  created_at: string
+  updated_at: string
+  // Joined from profiles
+  full_name?: string
+  email?: string
+  avatar_url?: string | null
+}
+
+export interface TrainingResource {
+  id: string
+  name: string
+  video_url: string | null
+  description: string | null
+  category: string | null
+  created_at: string
+}
+
+export interface DailyReport {
+  id: string
+  name: string
+  tags: string[]
+  report_date: string
+  created_by: string | null
+  created_at: string
+  // Computed
+  task_count?: number
+  meeting_count?: number
+  client_count?: number
+}
+
+export interface ProjectBuildPhase {
+  id: string
+  client_id: string
+  name: string
+  status: ProjectPhaseStatus
+  assigned_to: string | null
+  description: string | null
+  due_date: string | null
+  notes: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ClientLoginCred {
+  id: string
+  client_id: string
+  software_name: string
+  email: string | null
+  password_encrypted: string | null
   created_at: string
   updated_at: string
 }

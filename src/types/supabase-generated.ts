@@ -709,6 +709,422 @@ export type Database = {
         }
         Relationships: []
       }
+      agency_clients: {
+        Row: {
+          id: string
+          profile_id: string | null
+          name: string
+          client_status: Database["public"]["Enums"]["agency_client_status"]
+          plan: string[]
+          assigned_to: string | null
+          country: string[]
+          industry: string[]
+          website: string | null
+          linkedin_page: string | null
+          address: string | null
+          notes: string | null
+          contract_signed: string | null
+          onboarding_checklist_email: string | null
+          invoice_sent: string | null
+          monthly_retainer: number | null
+          average_check_size: number | null
+          comms_channel: string[]
+          poc_id: string | null
+          project_scope: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id?: string | null
+          name: string
+          client_status?: Database["public"]["Enums"]["agency_client_status"]
+          plan?: string[]
+          assigned_to?: string | null
+          country?: string[]
+          industry?: string[]
+          website?: string | null
+          linkedin_page?: string | null
+          address?: string | null
+          notes?: string | null
+          contract_signed?: string | null
+          onboarding_checklist_email?: string | null
+          invoice_sent?: string | null
+          monthly_retainer?: number | null
+          average_check_size?: number | null
+          comms_channel?: string[]
+          poc_id?: string | null
+          project_scope?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string | null
+          name?: string
+          client_status?: Database["public"]["Enums"]["agency_client_status"]
+          plan?: string[]
+          assigned_to?: string | null
+          country?: string[]
+          industry?: string[]
+          website?: string | null
+          linkedin_page?: string | null
+          address?: string | null
+          notes?: string | null
+          contract_signed?: string | null
+          onboarding_checklist_email?: string | null
+          invoice_sent?: string | null
+          monthly_retainer?: number | null
+          average_check_size?: number | null
+          comms_channel?: string[]
+          poc_id?: string | null
+          project_scope?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agency_tasks: {
+        Row: {
+          id: string
+          name: string
+          status: Database["public"]["Enums"]["agency_task_status"]
+          type: Database["public"]["Enums"]["agency_task_type"] | null
+          due_date: string | null
+          notes: string | null
+          person_id: string | null
+          client_id: string | null
+          daily_report_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          status?: Database["public"]["Enums"]["agency_task_status"]
+          type?: Database["public"]["Enums"]["agency_task_type"] | null
+          due_date?: string | null
+          notes?: string | null
+          person_id?: string | null
+          client_id?: string | null
+          daily_report_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["agency_task_status"]
+          type?: Database["public"]["Enums"]["agency_task_type"] | null
+          due_date?: string | null
+          notes?: string | null
+          person_id?: string | null
+          client_id?: string | null
+          daily_report_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agency_contacts: {
+        Row: {
+          id: string
+          name: string
+          type: string[]
+          email: string | null
+          phone: string | null
+          role_title: string | null
+          time_zone: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          type?: string[]
+          email?: string | null
+          phone?: string | null
+          role_title?: string | null
+          time_zone?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          type?: string[]
+          email?: string | null
+          phone?: string | null
+          role_title?: string | null
+          time_zone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agency_meetings: {
+        Row: {
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["agency_meeting_type"] | null
+          date: string | null
+          notes: string | null
+          recording_url: string | null
+          client_id: string | null
+          daily_report_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          type?: Database["public"]["Enums"]["agency_meeting_type"] | null
+          date?: string | null
+          notes?: string | null
+          recording_url?: string | null
+          client_id?: string | null
+          daily_report_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["agency_meeting_type"] | null
+          date?: string | null
+          notes?: string | null
+          recording_url?: string | null
+          client_id?: string | null
+          daily_report_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      audiences: {
+        Row: {
+          id: string
+          audience_name: string
+          date: string | null
+          geo: string | null
+          company_keywords_broad: string | null
+          company_keywords_specific: string | null
+          titles_broad: string | null
+          titles_specific: string | null
+          links: string | null
+          gpt_url: string | null
+          client_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          audience_name: string
+          date?: string | null
+          geo?: string | null
+          company_keywords_broad?: string | null
+          company_keywords_specific?: string | null
+          titles_broad?: string | null
+          titles_specific?: string | null
+          links?: string | null
+          gpt_url?: string | null
+          client_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          audience_name?: string
+          date?: string | null
+          geo?: string | null
+          company_keywords_broad?: string | null
+          company_keywords_specific?: string | null
+          titles_broad?: string | null
+          titles_specific?: string | null
+          links?: string | null
+          gpt_url?: string | null
+          client_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          id: string
+          profile_id: string
+          job_title: string | null
+          department: Database["public"]["Enums"]["employee_department"] | null
+          location: string | null
+          start_date: string | null
+          phone_number: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          job_title?: string | null
+          department?: Database["public"]["Enums"]["employee_department"] | null
+          location?: string | null
+          start_date?: string | null
+          phone_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          job_title?: string | null
+          department?: Database["public"]["Enums"]["employee_department"] | null
+          location?: string | null
+          start_date?: string | null
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      training_resources: {
+        Row: {
+          id: string
+          name: string
+          video_url: string | null
+          description: string | null
+          category: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          video_url?: string | null
+          description?: string | null
+          category?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          video_url?: string | null
+          description?: string | null
+          category?: string | null
+        }
+        Relationships: []
+      }
+      daily_reports: {
+        Row: {
+          id: string
+          name: string
+          tags: string[]
+          report_date: string
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          tags?: string[]
+          report_date?: string
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          tags?: string[]
+          report_date?: string
+          created_by?: string | null
+        }
+        Relationships: []
+      }
+      project_build_timeline: {
+        Row: {
+          id: string
+          client_id: string
+          name: string
+          status: Database["public"]["Enums"]["project_phase_status"]
+          assigned_to: string | null
+          description: string | null
+          due_date: string | null
+          notes: string | null
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          name: string
+          status?: Database["public"]["Enums"]["project_phase_status"]
+          assigned_to?: string | null
+          description?: string | null
+          due_date?: string | null
+          notes?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          name?: string
+          status?: Database["public"]["Enums"]["project_phase_status"]
+          assigned_to?: string | null
+          description?: string | null
+          due_date?: string | null
+          notes?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_login_creds: {
+        Row: {
+          id: string
+          client_id: string
+          software_name: string
+          email: string | null
+          password_encrypted: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          software_name: string
+          email?: string | null
+          password_encrypted?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          software_name?: string
+          email?: string | null
+          password_encrypted?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      agency_client_contacts: {
+        Row: { client_id: string; contact_id: string }
+        Insert: { client_id: string; contact_id: string }
+        Update: { client_id?: string; contact_id?: string }
+        Relationships: []
+      }
+      agency_client_daily_reports: {
+        Row: { client_id: string; daily_report_id: string }
+        Insert: { client_id: string; daily_report_id: string }
+        Update: { client_id?: string; daily_report_id?: string }
+        Relationships: []
+      }
+      agency_meeting_participants: {
+        Row: { meeting_id: string; contact_id: string }
+        Insert: { meeting_id: string; contact_id: string }
+        Update: { meeting_id?: string; contact_id?: string }
+        Relationships: []
+      }
+      agency_meeting_internals: {
+        Row: { meeting_id: string; user_id: string }
+        Insert: { meeting_id: string; user_id: string }
+        Update: { meeting_id?: string; user_id?: string }
+        Relationships: []
+      }
       workflow_downloads: {
         Row: {
           downloaded_at: string
@@ -819,6 +1235,20 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
+      agency_client_status:
+        | "Pre-Onboarding" | "Onboarding Call" | "Onboarding Email"
+        | "Audit Process" | "Kick Off Call" | "Start Implementation"
+        | "End Implementation" | "Train Team" | "Optimisation"
+        | "Full Launch" | "Monthly Optimisation"
+      agency_task_status: "BLOCKED" | "Not Started" | "In Progress" | "Complete"
+      agency_task_type: "Internal" | "Client Action" | "Automation"
+      agency_meeting_type:
+        | "Sales" | "Onboarding" | "Kickoff" | "Progress"
+        | "Team Sync" | "Client Meeting" | "Planning" | "Retrospective"
+      employee_department:
+        | "Campaign Management" | "Account Management"
+        | "Marketing" | "Sales" | "Operations"
+      project_phase_status: "Blocked" | "Not Started" | "In Progress" | "Complete"
       app_level: "lv1" | "lv2" | "lv3"
       bid_status: "pending" | "accepted" | "rejected" | "withdrawn"
       blog_status: "draft" | "scheduled" | "published"
@@ -975,6 +1405,23 @@ export const Constants = {
   },
   public: {
     Enums: {
+      agency_client_status: [
+        "Pre-Onboarding", "Onboarding Call", "Onboarding Email",
+        "Audit Process", "Kick Off Call", "Start Implementation",
+        "End Implementation", "Train Team", "Optimisation",
+        "Full Launch", "Monthly Optimisation",
+      ],
+      agency_task_status: ["BLOCKED", "Not Started", "In Progress", "Complete"],
+      agency_task_type: ["Internal", "Client Action", "Automation"],
+      agency_meeting_type: [
+        "Sales", "Onboarding", "Kickoff", "Progress",
+        "Team Sync", "Client Meeting", "Planning", "Retrospective",
+      ],
+      employee_department: [
+        "Campaign Management", "Account Management",
+        "Marketing", "Sales", "Operations",
+      ],
+      project_phase_status: ["Blocked", "Not Started", "In Progress", "Complete"],
       app_level: ["lv1", "lv2", "lv3"],
       bid_status: ["pending", "accepted", "rejected", "withdrawn"],
       blog_status: ["draft", "scheduled", "published"],

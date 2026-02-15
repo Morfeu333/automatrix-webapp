@@ -2,7 +2,7 @@ const N8N_WEBHOOK_URL = "https://n8n.automatrix.site/webhook/onboardf"
 
 export async function POST(req: Request) {
   try {
-    const { message, sessionId, role, userName, userEmail } = await req.json()
+    const { message, sessionId, role, userName, userEmail, userId } = await req.json()
 
     if (!message || !sessionId || !role) {
       return Response.json(
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const response = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, sessionId, role, userName, userEmail }),
+      body: JSON.stringify({ message, sessionId, role, userName, userEmail, userId }),
       signal: AbortSignal.timeout(30000),
     })
 
